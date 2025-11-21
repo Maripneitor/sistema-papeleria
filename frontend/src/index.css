@@ -1,0 +1,112 @@
+:root {
+  --primary: #2563eb;
+  --bg: #f1f5f9;
+  --card: #ffffff;
+  --text: #1e293b;
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background-color: var(--bg);
+  color: var(--text);
+}
+
+/* Layout POS */
+.pos-container {
+  display: grid;
+  grid-template-columns: 2fr 1fr; /* 2 partes productos, 1 parte ticket */
+  height: 100vh;
+  gap: 20px;
+  padding: 20px;
+  box-sizing: border-box;
+}
+
+/* Panel Izquierdo */
+.panel-izquierdo {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.buscador {
+  padding: 15px;
+  font-size: 1.2rem;
+  border: 1px solid #ccc;
+  border-radius: 8px;
+  width: 100%;
+}
+
+.grid-productos {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 15px;
+  overflow-y: auto;
+}
+
+.card-producto {
+  background: var(--card);
+  padding: 15px;
+  border-radius: 8px;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  cursor: pointer;
+  transition: transform 0.1s;
+  border: 1px solid transparent;
+}
+
+.card-producto:hover {
+  transform: translateY(-2px);
+  border-color: var(--primary);
+}
+
+.prod-precio {
+  font-weight: bold;
+  color: var(--primary);
+  font-size: 1.1rem;
+}
+
+/* Panel Derecho (Ticket) */
+.panel-derecho {
+  background: var(--card);
+  padding: 20px;
+  border-radius: 12px;
+  display: flex;
+  flex-direction: column;
+  box-shadow: -2px 0 10px rgba(0,0,0,0.1);
+}
+
+.lista-carrito {
+  flex: 1;
+  overflow-y: auto;
+  border-top: 1px solid #eee;
+  border-bottom: 1px solid #eee;
+  margin: 10px 0;
+  padding: 10px 0;
+}
+
+.item-carrito {
+  display: flex;
+  justify-content: space-between;
+  padding: 8px 0;
+  border-bottom: 1px dashed #eee;
+}
+
+.total-section {
+  text-align: right;
+}
+
+.btn-cobrar {
+  width: 100%;
+  padding: 15px;
+  background: #16a34a;
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-size: 1.2rem;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.btn-cobrar:disabled {
+  background: #ccc;
+}
