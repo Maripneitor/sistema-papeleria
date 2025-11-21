@@ -8,7 +8,7 @@ export interface Usuario {
     usuario: string;
     password_hash: string;
     rol: RolUsuario;
-    activo: boolean; // Mapeado de TINYINT 1/0
+    activo: boolean;
 }
 
 export interface Proveedor {
