@@ -16,14 +16,17 @@ export class ReportesRepository {
         return rows;
     }
 
-    // Ventas de los últimos 7 días
+    // Ventas de la semana (CORREGIDO)
     async obtenerVentasSemana() {
         const [rows] = await pool.query<RowDataPacket[]>(`
-            SELECT DATE_FORMAT(fecha, '%Y-%m-%d') as fecha, SUM(total) as total_venta, COUNT(*) as num_tickets
+            SELECT 
+                DATE_FORMAT(fecha, '%Y-%m-%d') as fecha, 
+                SUM(total) as total_venta, 
+                COUNT(*) as num_tickets
             FROM ventas
             WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
-            GROUP BY DATE(fecha)
-            ORDER BY fecha DESC
+            GROUP BY DATE_FORMAT(fecha, '%Y-%m-%d')
+            ORDER BY fecha ASC
         `);
         return rows;
     }

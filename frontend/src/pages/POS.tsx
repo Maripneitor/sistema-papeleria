@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import client from '../api/client';
 import { Producto, ApiResponse } from '../types';
+import { generarTicketPDF } from '../utils/exportUtils';
+import { Printer } from 'lucide-react';
 
-// Interfaz local para el carrito (extiende Producto con cantidad)
+// Interfaz local para el carrito
 interface CartItem extends Producto {
     cantidad: number;
     subtotal: number;
@@ -45,7 +47,7 @@ export default function POS() {
     // Calcular Total
     const totalVenta = carrito.reduce((sum, item) => sum + item.subtotal, 0);
 
-    // Procesar Venta (Enviar al Backend)
+    // Procesar Venta
     const cobrar = async () => {
         if (carrito.length === 0) return;
         setLoading(true);
@@ -53,8 +55,8 @@ export default function POS() {
         const ventaPayload = {
             venta: {
                 total: totalVenta,
-                metodo_pago: 'Efectivo', // Hardcodeado por ahora
-                id_usuario: 1 // Admin por defecto
+                metodo_pago: 'Efectivo',
+                id_usuario: 1 
             },
             detalles: carrito.map(item => ({
                 id_producto: item.id_producto,
@@ -67,8 +69,15 @@ export default function POS() {
         try {
             const res = await client.post('/ventas', ventaPayload);
             if (res.data.success) {
-                alert(`✅ Venta registrada! ID: ${res.data.id_venta}`);
-                setCarrito([]); // Limpiar carrito
+                // PREGUNTAR SI IMPRIMIR TICKET
+                // Usamos un pequeño timeout para que React renderice antes del confirm
+                setTimeout(() => {
+                    const imprimir = confirm('✅ Venta registrada. ¿Imprimir Ticket?');
+                    if (imprimir) {
+                        generarTicketPDF({ total: totalVenta }, carrito);
+                    }
+                }, 100);
+                setCarrito([]); 
             }
         } catch (error: any) {
             alert('❌ Error al cobrar: ' + (error.response?.data?.message || error.message));
@@ -83,7 +92,7 @@ export default function POS() {
             <div className="panel-izquierdo">
                 <input 
                     type="text" 
-                    placeholder="🔍 Buscar por nombre o SKU..." 
+                    placeholder="�� Buscar por nombre o SKU..." 
                     className="buscador"
                     value={busqueda}
                     onChange={e => setBusqueda(e.target.value)}
@@ -120,7 +129,11 @@ export default function POS() {
                         onClick={cobrar}
                         disabled={loading || carrito.length === 0}
                     >
-                        {loading ? 'Procesando...' : '💰 COBRAR'}
+                        {loading ? 'Procesando...' : (
+                            <span style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'}}>
+                                <Printer size={24} /> COBRAR
+                            </span>
+                        )}
                     </button>
                 </div>
             </div>
