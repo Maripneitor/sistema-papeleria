@@ -1,37 +1,36 @@
-import express, { Application, Request, Response } from 'express';
+import express, { Application } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import dotenv from 'dotenv';
 import pool from './config/db';
+import routerApp from './routes';
 
 // Configuración
 dotenv.config();
 const app: Application = express();
 const port = process.env.PORT || 3000;
 
-// Middlewares base
-app.use(express.json());
+// Middlewares
+app.use(express.json()); // Para entender JSON en el body
 app.use(cors());
 app.use(helmet());
 
-// Ruta de prueba
-app.get('/', (req: Request, res: Response) => {
-    res.json({ 
-        mensaje: 'Bienvenido a la API del Sistema de Papelería',
-        estado: 'online' 
-    });
+// Rutas API
+app.use('/api', routerApp);
+
+// Ruta base
+app.get('/', (req, res) => {
+    res.json({ api: 'Sistema Papelería V1', estado: 'online' });
 });
 
 // Iniciar servidor
 app.listen(port, async () => {
     console.log(`🚀 Servidor corriendo en http://localhost:${port}`);
-    
-    // Verificar conexión a BD al iniciar
     try {
         const connection = await pool.getConnection();
-        console.log('✅ Base de datos conectada exitosamente');
+        console.log('✅ Base de datos conectada');
         connection.release();
     } catch (error) {
-        console.error('❌ Error fatal: No se pudo conectar a la BD:', error);
+        console.error('❌ Error BD:', error);
     }
 });
