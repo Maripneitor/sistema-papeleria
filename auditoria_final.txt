@@ -1,0 +1,450 @@
+=== AUDITORIA SISTEMA PAPELERIA ===
+
+1. ESTRUCTURA DE DIRECTORIOS:
+.
+./.git
+./package-lock.json
+./.env
+./frontend
+./frontend/package-lock.json
+./frontend/index.html
+./frontend/src
+./frontend/src/App.tsx
+./frontend/src/pages
+./frontend/src/pages/Reportes.tsx
+./frontend/src/pages/POS.tsx
+./frontend/src/pages/Compras.tsx
+./frontend/src/pages/Dashboard.tsx
+./frontend/src/pages/Productos.tsx
+./frontend/src/pages/Usuarios.tsx
+./frontend/src/pages/Proveedores.tsx
+./frontend/src/components
+./frontend/src/components/Layout.tsx
+./frontend/src/hooks
+./frontend/src/api
+./frontend/src/api/client.ts
+./frontend/src/styles
+./frontend/src/types
+./frontend/src/types/index.ts
+./frontend/src/context
+./frontend/src/utils
+./frontend/src/utils/exportUtils.ts
+./frontend/src/main.tsx
+./frontend/src/index.css
+./frontend/node_modules
+./frontend/tsconfig.node.json
+./frontend/vite.config.ts
+./frontend/tsconfig.json
+./frontend/package.json
+./auditoria_final.txt
+./node_modules
+./.gitignore
+./database
+./database/schema.sql
+./scripts
+./backend
+./backend/package-lock.json
+./backend/.env.example
+./backend/.env
+./backend/src
+./backend/src/index.ts
+./backend/src/config
+./backend/src/config/db.ts
+./backend/src/modules
+./backend/src/modules/reportes
+./backend/src/modules/usuarios
+./backend/src/modules/ventas
+./backend/src/modules/bitacora
+./backend/src/modules/proveedores
+./backend/src/modules/inventario
+./backend/src/modules/productos
+./backend/src/modules/compras
+./backend/src/modules/shared
+./backend/src/db
+./backend/src/routes
+./backend/src/routes/index.ts
+./backend/src/seed.ts
+./backend/src/shared
+./backend/src/shared/types
+./backend/src/test-logic.ts
+./backend/src/test-ventas.ts
+./backend/node_modules
+./backend/tsconfig.json
+./backend/package.json
+./install.sh
+./package.json
+
+2. REPOSITORIO REPORTES (Verificar SQL Strict):
+import { RowDataPacket } from 'mysql2';
+import pool from '../../config/db';
+
+export class ReportesRepository {
+
+    // Top 5 Productos más vendidos
+    async obtenerTopProductos() {
+        const [rows] = await pool.query<RowDataPacket[]>(`
+            SELECT p.nombre, SUM(vd.cantidad) as total_unidades, SUM(vd.subtotal) as total_dinero
+            FROM ventas_detalle vd
+            JOIN productos p ON vd.id_producto = p.id_producto
+            GROUP BY p.id_producto, p.nombre
+            ORDER BY total_unidades DESC
+            LIMIT 5
+        `);
+        return rows;
+    }
+
+    // Ventas de la semana (CORREGIDO)
+    async obtenerVentasSemana() {
+        const [rows] = await pool.query<RowDataPacket[]>(`
+            SELECT 
+                DATE_FORMAT(fecha, '%Y-%m-%d') as fecha, 
+                SUM(total) as total_venta, 
+                COUNT(*) as num_tickets
+            FROM ventas
+            WHERE fecha >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)
+            GROUP BY DATE_FORMAT(fecha, '%Y-%m-%d')
+            ORDER BY fecha ASC
+        `);
+        return rows;
+    }
+}
+
+3. UTILS EXPORT (Verificar PDF/Excel):
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import * as XLSX from 'xlsx';
+
+// EXPORTAR A EXCEL
+export const exportToExcel = (data: any[], fileName: string) => {
+    const ws = XLSX.utils.json_to_sheet(data);
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, "Datos");
+    XLSX.writeFile(wb, `${fileName}.xlsx`);
+};
+
+// GENERAR TICKET (PDF FORMATO 80mm)
+export const generarTicketPDF = (venta: any, items: any[]) => {
+    const doc = new jsPDF({
+        orientation: 'portrait',
+        unit: 'mm',
+        format: [80, 200] // Formato ticket térmico
+    });
+
+    doc.setFontSize(12);
+    doc.text('PAPELERÍA PRO', 40, 10, { align: 'center' });
+    doc.setFontSize(8);
+    doc.text('RFC: XAXX010101000', 40, 15, { align: 'center' });
+    doc.text(`Fecha: ${new Date().toLocaleString()}`, 5, 25);
+    doc.text('-------------------------------------------', 5, 28);
+
+    let y = 35;
+    items.forEach((item: any) => {
+        const nombre = item.nombre.substring(0, 15); // Cortar nombre largo
+        doc.text(`${item.cantidad} x ${nombre}`, 5, y);
+        doc.text(`$${item.subtotal.toFixed(2)}`, 75, y, { align: 'right' });
+        y += 5;
+    });
+
+    doc.text('-------------------------------------------', 5, y);
+    y += 5;
+    doc.setFontSize(10);
+    doc.text(`TOTAL: $${venta.total.toFixed(2)}`, 75, y, { align: 'right' });
+    
+    y += 10;
+    doc.setFontSize(8);
+    doc.text('¡Gracias por su compra!', 40, y, { align: 'center' });
+
+    // Abrir PDF en nueva ventana para imprimir
+    window.open(doc.output('bloburl'), '_blank');
+};
+
+4. VISTA POS (Verificar Integración Ticket):
+import React, { useState, useEffect } from 'react';
+import client from '../api/client';
+import { Producto, ApiResponse } from '../types';
+import { generarTicketPDF } from '../utils/exportUtils';
+import { Printer } from 'lucide-react';
+
+// Interfaz local para el carrito
+interface CartItem extends Producto {
+    cantidad: number;
+    subtotal: number;
+}
+
+export default function POS() {
+    const [productos, setProductos] = useState<Producto[]>([]);
+    const [busqueda, setBusqueda] = useState('');
+    const [carrito, setCarrito] = useState<CartItem[]>([]);
+    const [loading, setLoading] = useState(false);
+
+    // Cargar catálogo al iniciar
+    useEffect(() => {
+        client.get<ApiResponse<Producto[]>>('/productos')
+            .then(res => setProductos(res.data.data))
+            .catch(err => console.error(err));
+    }, []);
+
+    // Filtrar productos visualmente
+    const productosFiltrados = productos.filter(p => 
+        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+        p.sku.includes(busqueda)
+    );
+
+    // Agregar al carrito
+    const agregarAlCarrito = (prod: Producto) => {
+        setCarrito(prev => {
+            const existente = prev.find(item => item.id_producto === prod.id_producto);
+            if (existente) {
+                return prev.map(item => 
+                    item.id_producto === prod.id_producto
+                        ? { ...item, cantidad: item.cantidad + 1, subtotal: (item.cantidad + 1) * item.precio_venta }
+                        : item
+                );
+            }
+            return [...prev, { ...prod, cantidad: 1, subtotal: prod.precio_venta }];
+        });
+    };
+
+    // Calcular Total
+    const totalVenta = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+
+    // Procesar Venta
+    const cobrar = async () => {
+        if (carrito.length === 0) return;
+        setLoading(true);
+
+        const ventaPayload = {
+            venta: {
+                total: totalVenta,
+                metodo_pago: 'Efectivo',
+                id_usuario: 1 
+            },
+            detalles: carrito.map(item => ({
+                id_producto: item.id_producto,
+                cantidad: item.cantidad,
+                precio_unitario: item.precio_venta,
+                subtotal: item.subtotal
+            }))
+        };
+
+        try {
+            const res = await client.post('/ventas', ventaPayload);
+            if (res.data.success) {
+                // PREGUNTAR SI IMPRIMIR TICKET
+                // Usamos un pequeño timeout para que React renderice antes del confirm
+                setTimeout(() => {
+                    const imprimir = confirm('✅ Venta registrada. ¿Imprimir Ticket?');
+                    if (imprimir) {
+                        generarTicketPDF({ total: totalVenta }, carrito);
+                    }
+                }, 100);
+                setCarrito([]); 
+            }
+        } catch (error: any) {
+            alert('❌ Error al cobrar: ' + (error.response?.data?.message || error.message));
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    return (
+        <div className="pos-container">
+            {/* ZONA IZQUIERDA: PRODUCTOS */}
+            <div className="panel-izquierdo">
+                <input 
+                    type="text" 
+                    placeholder="�� Buscar por nombre o SKU..." 
+                    className="buscador"
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                />
+                <div className="grid-productos">
+                    {productosFiltrados.map(prod => (
+                        <div key={prod.id_producto} className="card-producto" onClick={() => agregarAlCarrito(prod)}>
+                            <div className="prod-nombre">{prod.nombre}</div>
+                            <div className="prod-precio">${prod.precio_venta}</div>
+                            <div className="prod-stock">Stock: {prod.stock_actual ?? 'N/A'}</div>
+                        </div>
+                    ))}
+                </div>
+            </div>
+
+            {/* ZONA DERECHA: TICKET */}
+            <div className="panel-derecho">
+                <h2>🛒 Ticket de Venta</h2>
+                <div className="lista-carrito">
+                    {carrito.length === 0 ? <p style={{color: '#888'}}>Carrito vacío</p> : (
+                        carrito.map((item, idx) => (
+                            <div key={idx} className="item-carrito">
+                                <span>{item.cantidad}x {item.nombre}</span>
+                                <span>${item.subtotal.toFixed(2)}</span>
+                            </div>
+                        ))
+                    )}
+                </div>
+                
+                <div className="total-section">
+                    <h3>Total: ${totalVenta.toFixed(2)}</h3>
+                    <button 
+                        className="btn-cobrar" 
+                        onClick={cobrar}
+                        disabled={loading || carrito.length === 0}
+                    >
+                        {loading ? 'Procesando...' : (
+                            <span style={{display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '10px'}}>
+                                <Printer size={24} /> COBRAR
+                            </span>
+                        )}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+5. VISTA PRODUCTOS (Verificar Nuevo CRUD):
+import React, { useEffect, useState } from 'react';
+import client from '../api/client';
+import { Producto, ApiResponse } from '../types';
+import { exportToExcel } from '../utils/exportUtils';
+import { Plus, FileSpreadsheet, Search, Package, AlertTriangle } from 'lucide-react';
+
+export default function Productos() {
+    const [productos, setProductos] = useState<Producto[]>([]);
+    const [busqueda, setBusqueda] = useState('');
+    const [loading, setLoading] = useState(false);
+    const [mostrarForm, setMostrarForm] = useState(false);
+    
+    // Formulario local
+    const [form, setForm] = useState({
+        sku: '', nombre: '', precio_venta: '', costo: '', stock_inicial: '0', categoria: 'General'
+    });
+
+    const cargar = () => {
+        setLoading(true);
+        client.get<ApiResponse<Producto[]>>('/productos')
+            .then(res => setProductos(res.data.data))
+            .finally(() => setLoading(false));
+    };
+
+    useEffect(() => { cargar(); }, []);
+
+    const guardar = async (e: React.FormEvent) => {
+        e.preventDefault();
+        try {
+            await client.post('/productos', {
+                ...form,
+                precio_venta: parseFloat(form.precio_venta),
+                costo: parseFloat(form.costo),
+                // Nota: El stock inicial se manejaría idealmente con una "compra" de ajuste, 
+                // pero para este MVP lo dejaremos en 0 o requeriría ajustar el endpoint.
+                rotacion: 'media',
+                estado: 'activo'
+            });
+            alert('✅ Producto Creado');
+            setMostrarForm(false);
+            setForm({ sku: '', nombre: '', precio_venta: '', costo: '', stock_inicial: '0', categoria: 'General' });
+            cargar();
+        } catch (error: any) {
+            alert('Error: ' + error.response?.data?.message);
+        }
+    };
+
+    const filtrados = productos.filter(p => 
+        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.sku.includes(busqueda)
+    );
+
+    // Función para semáforo de stock
+    const getStockStatus = (stock: number) => {
+        if (stock <= 5) return { color: '#ef4444', text: 'Crítico', icon: <AlertTriangle size={14} /> };
+        if (stock <= 20) return { color: '#f59e0b', text: 'Bajo', icon: null };
+        return { color: '#10b981', text: 'Bien', icon: null };
+    };
+
+    return (
+        <div>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                <h1>📦 Inventario Maestro</h1>
+                <div style={{ display: 'flex', gap: '10px' }}>
+                    <button className="btn btn-outline" onClick={() => exportToExcel(productos, 'Inventario_Papeleria')}>
+                        <FileSpreadsheet size={18} /> Exportar Excel
+                    </button>
+                    <button className="btn btn-primary" onClick={() => setMostrarForm(!mostrarForm)}>
+                        <Plus size={18} /> Nuevo Producto
+                    </button>
+                </div>
+            </div>
+
+            {/* FORMULARIO FLOTANTE (SIMPLE) */}
+            {mostrarForm && (
+                <div className="card" style={{ marginBottom: '20px', borderLeft: '4px solid #2563eb' }}>
+                    <h3>✨ Registrar Nuevo Artículo</h3>
+                    <form onSubmit={guardar} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '15px', marginTop: '15px' }}>
+                        <input className="buscador" placeholder="SKU (Código)" value={form.sku} onChange={e => setForm({...form, sku: e.target.value})} required />
+                        <input className="buscador" placeholder="Nombre Producto" value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} required />
+                        <input className="buscador" type="number" placeholder="Costo ($)" value={form.costo} onChange={e => setForm({...form, costo: e.target.value})} required />
+                        <input className="buscador" type="number" placeholder="Precio Venta ($)" value={form.precio_venta} onChange={e => setForm({...form, precio_venta: e.target.value})} required />
+                        <input className="buscador" placeholder="Categoría" value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} />
+                        <button type="submit" className="btn btn-success" style={{ justifyContent: 'center' }}>Guardar</button>
+                    </form>
+                </div>
+            )}
+
+            {/* BARRA DE BÚSQUEDA */}
+            <div style={{ position: 'relative', marginBottom: '20px', maxWidth: '400px' }}>
+                <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                <input 
+                    type="text" 
+                    placeholder="Buscar producto..." 
+                    value={busqueda}
+                    onChange={e => setBusqueda(e.target.value)}
+                    style={{ width: '100%', padding: '10px 10px 10px 40px', borderRadius: '8px', border: '1px solid #e2e8f0' }}
+                />
+            </div>
+
+            {/* TABLA PROFESIONAL */}
+            <div className="card" style={{ padding: 0, overflow: 'hidden' }}>
+                <table style={{ width: '100%' }}>
+                    <thead style={{ background: '#f8fafc' }}>
+                        <tr>
+                            <th>SKU</th>
+                            <th>Producto</th>
+                            <th>Categoría</th>
+                            <th>Costo</th>
+                            <th>Precio</th>
+                            <th>Margen</th>
+                            <th>Stock</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {filtrados.map(p => {
+                            const stock = p.stock_actual || 0;
+                            const status = getStockStatus(stock);
+                            const margen = ((p.precio_venta - p.costo) / p.precio_venta * 100).toFixed(1);
+                            
+                            return (
+                                <tr key={p.id_producto}>
+                                    <td style={{ fontFamily: 'monospace', fontWeight: 'bold' }}>{p.sku}</td>
+                                    <td>
+                                        <div style={{ fontWeight: 500 }}>{p.nombre}</div>
+                                    </td>
+                                    <td><span style={{ background: '#f1f5f9', padding: '2px 8px', borderRadius: '12px', fontSize: '0.8rem' }}>{p.categoria || 'Gral'}</span></td>
+                                    <td>${p.costo}</td>
+                                    <td style={{ fontWeight: 'bold', color: '#2563eb' }}>${p.precio_venta}</td>
+                                    <td style={{ color: '#64748b', fontSize: '0.9rem' }}>{margen}%</td>
+                                    <td>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px', color: status.color, fontWeight: 'bold' }}>
+                                            {status.icon}
+                                            {stock}
+                                        </div>
+                                    </td>
+                                </tr>
+                            );
+                        })}
+                    </tbody>
+                </table>
+                {filtrados.length === 0 && <div style={{ padding: '20px', textAlign: 'center', color: '#94a3b8' }}>No se encontraron productos</div>}
+            </div>
+        </div>
+    );
+}
