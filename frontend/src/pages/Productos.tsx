@@ -2,8 +2,11 @@ import React, { useEffect, useState } from 'react';
 import client from '../api/client';
 import { Producto, ApiResponse } from '../types';
 import { exportToExcel } from '../utils/exportUtils';
-import { Plus, FileSpreadsheet, Search, Package } from 'lucide-react';
-import { PageContainer, Card, CardTitle, Button, Input, Table, Badge, Grid2, FormGroup } from '../components/ui/StyledComponents';
+import { Plus, FileSpreadsheet, Search } from 'lucide-react';
+import { 
+    PageContainer, Card, Title, Subtitle, Button, Input, 
+    Badge, Grid2, HeaderSection 
+} from '../components/ui/SystemDesign';
 
 export default function Productos() {
     const [productos, setProductos] = useState<Producto[]>([]);
@@ -11,8 +14,9 @@ export default function Productos() {
     const [loading, setLoading] = useState(false);
     const [mostrarForm, setMostrarForm] = useState(false);
     
+    // Form state
     const [form, setForm] = useState({
-        sku: '', nombre: '', precio_venta: '', costo: '', stock_inicial: '0', categoria: 'General'
+        sku: '', nombre: '', precio_venta: '', costo: '', categoria: 'General'
     });
 
     const cargar = () => {
@@ -36,7 +40,7 @@ export default function Productos() {
             });
             alert('✅ Producto Creado');
             setMostrarForm(false);
-            setForm({ sku: '', nombre: '', precio_venta: '', costo: '', stock_inicial: '0', categoria: 'General' });
+            setForm({ sku: '', nombre: '', precio_venta: '', costo: '', categoria: 'General' });
             cargar();
         } catch (error: any) {
             alert('Error: ' + error.response?.data?.message);
@@ -47,116 +51,103 @@ export default function Productos() {
         p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.sku.includes(busqueda)
     );
 
-    const getStockColor = (stock: number) => {
-        if (stock <= 5) return '#ef4444';
-        if (stock <= 20) return '#f59e0b';
-        return '#10b981';
+    const getStockBadge = (stock: number) => {
+        if (stock <= 5) return <Badge type="danger">Crítico ({stock})</Badge>;
+        if (stock <= 20) return <Badge type="warning">Bajo ({stock})</Badge>;
+        return <Badge type="success">Bien ({stock})</Badge>;
     };
 
     return (
         <PageContainer>
-            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+            <HeaderSection>
                 <div>
-                    <h1 style={{ margin: 0, fontSize: '24px', color: '#1e293b' }}>Inventario</h1>
-                    <p style={{ color: '#64748b', margin: '5px 0 0 0', fontSize: '14px' }}>Gestiona tu catálogo de productos</p>
+                    <Title>Inventario Maestro</Title>
+                    <Subtitle>Gestiona tu catálogo de productos y precios</Subtitle>
                 </div>
                 <div style={{ display: 'flex', gap: '10px' }}>
-                    <Button variant="outline" onClick={() => exportToExcel(productos, 'Inventario_Papeleria')}>
+                    {/* CORRECCIÓN: Usamos $variant */}
+                    <Button $variant="secondary" onClick={() => exportToExcel(productos, 'Inventario_Papeleria')}>
                         <FileSpreadsheet size={18} /> Excel
                     </Button>
-                    <Button variant="primary" onClick={() => setMostrarForm(!mostrarForm)}>
+                    <Button onClick={() => setMostrarForm(!mostrarForm)}>
                         <Plus size={18} /> Nuevo Producto
                     </Button>
                 </div>
-            </div>
+            </HeaderSection>
 
-            <Grid2 style={{ marginBottom: '20px', gridTemplateColumns: mostrarForm ? '1fr 2fr' : '1fr' }}>
+            <Grid2 style={{ gridTemplateColumns: mostrarForm ? '1fr 2fr' : '1fr' }}>
                 
-                {/* FORMULARIO (COLAPSABLE) */}
+                {/* FORMULARIO */}
                 {mostrarForm && (
-                    <Card style={{ height: 'fit-content', borderTop: '4px solid #4480FF' }}>
-                        <CardTitle><Package size={18}/> Nuevo Artículo</CardTitle>
-                        <form onSubmit={guardar}>
-                            <FormGroup>
-                                <label>SKU (Código de Barras)</label>
-                                <Input value={form.sku} onChange={e => setForm({...form, sku: e.target.value})} placeholder="Ej. 750123..." required />
-                            </FormGroup>
-                            <FormGroup>
-                                <label>Nombre del Producto</label>
-                                <Input value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} placeholder="Ej. Libreta Profesional..." required />
-                            </FormGroup>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
-                                <FormGroup>
-                                    <label>Costo ($)</label>
-                                    <Input type="number" value={form.costo} onChange={e => setForm({...form, costo: e.target.value})} placeholder="0.00" required />
-                                </FormGroup>
-                                <FormGroup>
-                                    <label>Precio Venta ($)</label>
-                                    <Input type="number" value={form.precio_venta} onChange={e => setForm({...form, precio_venta: e.target.value})} placeholder="0.00" required />
-                                </FormGroup>
+                    <Card style={{ height: 'fit-content' }}>
+                        <h3 style={{ margin: '0 0 20px 0', fontSize: '16px' }}>✨ Nuevo Artículo</h3>
+                        <form onSubmit={guardar} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                            <div>
+                                <label style={{ fontSize: '12px', fontWeight: 600, marginBottom: 4, display: 'block' }}>SKU</label>
+                                <Input value={form.sku} onChange={e => setForm({...form, sku: e.target.value})} placeholder="Código de barras" required />
                             </div>
-                            <FormGroup>
-                                <label>Categoría</label>
-                                <Input value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} placeholder="Ej. Papel, Plumas..." />
-                            </FormGroup>
-                            <Button type="submit" variant="primary" style={{ width: '100%', marginTop: '10px' }}>Guardar Producto</Button>
+                            <div>
+                                <label style={{ fontSize: '12px', fontWeight: 600, marginBottom: 4, display: 'block' }}>Nombre</label>
+                                <Input value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} placeholder="Nombre del producto" required />
+                            </div>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px' }}>
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: 600, marginBottom: 4, display: 'block' }}>Costo</label>
+                                    <Input type="number" value={form.costo} onChange={e => setForm({...form, costo: e.target.value})} placeholder="0.00" required />
+                                </div>
+                                <div>
+                                    <label style={{ fontSize: '12px', fontWeight: 600, marginBottom: 4, display: 'block' }}>Precio Venta</label>
+                                    <Input type="number" value={form.precio_venta} onChange={e => setForm({...form, precio_venta: e.target.value})} placeholder="0.00" required />
+                                </div>
+                            </div>
+                            <div>
+                                <label style={{ fontSize: '12px', fontWeight: 600, marginBottom: 4, display: 'block' }}>Categoría</label>
+                                <Input value={form.categoria} onChange={e => setForm({...form, categoria: e.target.value})} placeholder="Ej. Papelería" />
+                            </div>
+                            <Button type="submit">Guardar Producto</Button>
                         </form>
                     </Card>
                 )}
 
-                {/* TABLA DE PRODUCTOS */}
-                <Card style={{ padding: '0' }}>
-                    <div style={{ padding: '20px', borderBottom: '1px solid #f1f5f9' }}>
-                        <div style={{ position: 'relative', maxWidth: '400px' }}>
-                            <Search size={18} style={{ position: 'absolute', left: '12px', top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} />
+                {/* TABLA */}
+                <Card style={{ padding: 0, overflow: 'hidden' }}>
+                    <div style={{ padding: '16px', borderBottom: '1px solid #eee' }}>
+                        <div style={{ position: 'relative', maxWidth: '300px' }}>
+                            <Search size={16} style={{ position: 'absolute', left: 12, top: 14, color: '#999' }} />
                             <Input 
-                                placeholder="Buscar por nombre, SKU o categoría..." 
+                                placeholder="Buscar..." 
                                 value={busqueda}
                                 onChange={e => setBusqueda(e.target.value)}
-                                style={{ paddingLeft: '40px' }}
+                                style={{ paddingLeft: '36px' }}
                             />
                         </div>
                     </div>
                     
                     <div style={{ overflowX: 'auto' }}>
-                        <Table>
-                            <thead>
+                        <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '14px' }}>
+                            <thead style={{ background: '#FAFAFA', borderBottom: '1px solid #eee' }}>
                                 <tr>
-                                    <th>Producto</th>
-                                    <th>Categoría</th>
-                                    <th>Costo</th>
-                                    <th>Precio</th>
-                                    <th>Margen</th>
-                                    <th>Stock</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#666' }}>Producto</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#666' }}>Categoría</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#666' }}>Precio</th>
+                                    <th style={{ padding: '12px 16px', textAlign: 'left', color: '#666' }}>Stock</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {filtrados.map(p => {
-                                    const stock = p.stock_actual || 0;
-                                    const margen = ((p.precio_venta - p.costo) / p.precio_venta * 100).toFixed(1);
-                                    
-                                    return (
-                                        <tr key={p.id_producto}>
-                                            <td>
-                                                <div style={{ fontWeight: 600, color: '#1e293b' }}>{p.nombre}</div>
-                                                <div style={{ fontSize: '11px', color: '#94a3b8', fontFamily: 'monospace' }}>{p.sku}</div>
-                                            </td>
-                                            <td><Badge>{p.categoria || 'General'}</Badge></td>
-                                            <td>${p.costo}</td>
-                                            <td style={{ fontWeight: 700, color: '#4480FF' }}>${p.precio_venta}</td>
-                                            <td style={{ fontSize: '12px', color: '#64748b' }}>{margen}%</td>
-                                            <td>
-                                                <Badge color={getStockColor(stock)}>
-                                                    {stock} Unidades
-                                                </Badge>
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
+                                {filtrados.map(p => (
+                                    <tr key={p.id_producto} style={{ borderBottom: '1px solid #f5f5f5' }}>
+                                        <td style={{ padding: '12px 16px' }}>
+                                            <div style={{ fontWeight: 600 }}>{p.nombre}</div>
+                                            <div style={{ fontSize: '12px', color: '#888' }}>{p.sku}</div>
+                                        </td>
+                                        <td style={{ padding: '12px 16px' }}><Badge>{p.categoria || 'General'}</Badge></td>
+                                        <td style={{ padding: '12px 16px', fontWeight: 600 }}>${p.precio_venta}</td>
+                                        <td style={{ padding: '12px 16px' }}>{getStockBadge(p.stock_actual || 0)}</td>
+                                    </tr>
+                                ))}
                             </tbody>
-                        </Table>
+                        </table>
                     </div>
-                    {filtrados.length === 0 && <div style={{ padding: '40px', textAlign: 'center', color: '#94a3b8' }}>No se encontraron productos</div>}
                 </Card>
             </Grid2>
         </PageContainer>

@@ -1,8 +1,11 @@
 import React, { useEffect, useState } from 'react';
 import client from '../api/client';
 import { Usuario } from '../types';
-import { PageContainer, Card, CardTitle, Input, Select, Button, Grid2, GridAuto, FormGroup, Badge } from '../components/ui/StyledComponents';
 import { UserPlus, Shield, User } from 'lucide-react';
+import { 
+    PageContainer, HeaderSection, Title, Subtitle, Card, 
+    Input, Button, Grid2, Badge 
+} from '../components/ui/SystemDesign';
 
 export default function Usuarios() {
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
@@ -24,7 +27,7 @@ export default function Usuarios() {
             cargar();
             alert('✅ Usuario registrado');
         } catch (error: any) {
-            alert('❌ ' + (error.response?.data?.message || 'Error al guardar'));
+            alert('Error: ' + (error.response?.data?.message || 'Error al guardar'));
         } finally {
             setLoading(false);
         }
@@ -32,60 +35,69 @@ export default function Usuarios() {
 
     return (
         <PageContainer>
-            <div style={{ marginBottom: '30px' }}>
-                <h1 style={{ margin: 0, fontSize: '24px', color: '#1e293b' }}>Equipo de Trabajo</h1>
-                <p style={{ color: '#64748b', margin: '5px 0 0 0', fontSize: '14px' }}>Gestiona el acceso al sistema</p>
-            </div>
+            <HeaderSection>
+                <div>
+                    <Title>Equipo de Trabajo</Title>
+                    <Subtitle>Gestiona los accesos al sistema</Subtitle>
+                </div>
+            </HeaderSection>
 
             <Grid2 style={{ gridTemplateColumns: '350px 1fr' }}>
                 <Card style={{ height: 'fit-content' }}>
-                    <CardTitle><UserPlus size={20} /> Nuevo Empleado</CardTitle>
-                    <form onSubmit={guardar}>
-                        <FormGroup>
-                            <label>Nombre Completo</label>
+                    <h3 style={{ margin: '0 0 20px 0', fontSize: '16px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <UserPlus size={18} /> Nuevo Usuario
+                    </h3>
+                    <form onSubmit={guardar} style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: 4 }}>Nombre Completo</label>
                             <Input required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} />
-                        </FormGroup>
-                        <FormGroup>
-                            <label>Usuario (Login)</label>
+                        </div>
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: 4 }}>Usuario (Login)</label>
                             <Input required value={form.usuario} onChange={e => setForm({...form, usuario: e.target.value})} />
-                        </FormGroup>
-                        <FormGroup>
-                            <label>Contraseña</label>
+                        </div>
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: 4 }}>Contraseña</label>
                             <Input type="password" required value={form.password_hash} onChange={e => setForm({...form, password_hash: e.target.value})} />
-                        </FormGroup>
-                        <FormGroup>
-                            <label>Rol de Acceso</label>
-                            <Select value={form.rol} onChange={e => setForm({...form, rol: e.target.value})}>
-                                <option value="empleado">Empleado (Cajero)</option>
+                        </div>
+                        <div>
+                            <label style={{ fontSize: '12px', fontWeight: 600, display: 'block', marginBottom: 4 }}>Rol</label>
+                            <select 
+                                style={{ width: '100%', height: '44px', padding: '0 12px', borderRadius: '8px', border: '1px solid #E5E5EA', background: '#F2F2F7' }}
+                                value={form.rol} 
+                                onChange={e => setForm({...form, rol: e.target.value})}
+                            >
+                                <option value="empleado">Empleado (Ventas)</option>
                                 <option value="admin">Administrador (Total)</option>
-                            </Select>
-                        </FormGroup>
-                        <Button type="submit" variant="primary" disabled={loading} style={{ width: '100%', marginTop: '15px' }}>
-                            {loading ? 'Guardando...' : 'Crear Usuario'}
+                            </select>
+                        </div>
+                        <Button type="submit" disabled={loading}>
+                            {loading ? 'Creando...' : 'Crear Usuario'}
                         </Button>
                     </form>
                 </Card>
 
-                <GridAuto>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(300px, 1fr))', gap: '20px' }}>
                     {usuarios.map(u => (
-                        <Card key={u.id_usuario} style={{ flexDirection: 'row', alignItems: 'center', gap: '15px', padding: '20px' }}>
+                        <Card key={u.id_usuario} style={{ flexDirection: 'row', alignItems: 'center', gap: '16px', padding: '20px' }}>
                             <div style={{ 
-                                width: 50, height: 50, borderRadius: '50%', 
-                                background: u.rol === 'admin' ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' : 'linear-gradient(135deg, #4480FF 0%, #0550ED 100%)',
-                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+                                width: 48, height: 48, borderRadius: '50%', 
+                                background: u.rol === 'admin' ? '#FFE5E5' : '#E5F2FF',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', 
+                                color: u.rol === 'admin' ? 'var(--danger)' : 'var(--primary)'
                             }}>
                                 {u.rol === 'admin' ? <Shield size={24} /> : <User size={24} />}
                             </div>
                             <div>
-                                <div style={{ fontWeight: '700', fontSize: '16px', color: '#1e293b' }}>{u.nombre}</div>
-                                <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>@{u.usuario}</div>
-                                <Badge color={u.rol === 'admin' ? '#e11d48' : '#4480FF'}>
+                                <div style={{ fontWeight: '700', fontSize: '16px' }}>{u.nombre}</div>
+                                <div style={{ fontSize: '13px', color: '#888', marginBottom: '6px' }}>@{u.usuario}</div>
+                                <Badge type={u.rol === 'admin' ? 'danger' : 'neutral'}>
                                     {u.rol.toUpperCase()}
                                 </Badge>
                             </div>
                         </Card>
                     ))}
-                </GridAuto>
+                </div>
             </Grid2>
         </PageContainer>
     );

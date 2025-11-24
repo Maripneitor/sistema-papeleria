@@ -1,104 +1,162 @@
 import React from 'react';
 import { Link, useLocation } from 'react-router-dom';
-import { LayoutDashboard, ShoppingCart, Package, Truck, Users, BarChart3, Boxes } from 'lucide-react';
 import styled from 'styled-components';
+import { 
+  LayoutDashboard, ShoppingCart, Package, Truck, 
+  Users, BarChart3, Settings, LogOut, FileText 
+} from 'lucide-react';
 
-interface LayoutProps {
-    children: React.ReactNode;
-}
-
-const LayoutContainer = styled.div`
+const LayoutWrapper = styled.div`
   display: flex;
   min-height: 100vh;
-  background-color: #f3f4f6; /* Fondo global suave */
+  background-color: var(--bg-app);
 `;
 
 const Sidebar = styled.aside`
   width: 260px;
-  background: #FFFFFF; /* Sidebar Blanco limpio */
-  border-right: 1px solid #e5e7eb;
+  background: var(--bg-sidebar);
+  border-right: var(--border-subtle);
   display: flex;
   flex-direction: column;
   position: fixed;
-  height: 100%;
+  height: 100vh;
+  padding: 24px 16px;
   z-index: 50;
-  box-shadow: 4px 0 24px rgba(0,0,0,0.02);
 `;
 
-const Main = styled.main`
-  flex: 1;
-  margin-left: 260px;
-  padding: 30px;
-  width: calc(100% - 260px);
-`;
-
-const NavItem = styled(Link)<{ $active: boolean }>`
+const LogoArea = styled.div`
+  margin-bottom: 40px;
+  padding: 0 12px;
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 14px 20px;
-  margin: 4px 12px;
-  border-radius: 12px;
-  text-decoration: none;
-  color: ${props => props.$active ? '#FFFFFF' : '#64748b'};
-  background: ${props => props.$active ? 'linear-gradient(90deg, #4480FF 0%, #115DFC 100%)' : 'transparent'};
-  font-weight: ${props => props.$active ? '600' : '500'};
-  font-size: 14px;
-  transition: all 0.2s;
-  box-shadow: ${props => props.$active ? '0 4px 12px rgba(68, 128, 255, 0.3)' : 'none'};
-
-  &:hover {
-    background: ${props => props.$active ? '' : '#f8fafc'};
-    color: ${props => props.$active ? '#FFFFFF' : '#4480FF'};
-    transform: translateX(2px);
+  
+  h2 {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-primary);
+    margin: 0;
+    span { color: var(--primary); }
   }
 `;
 
-export default function Layout({ children }: LayoutProps) {
-    const location = useLocation();
+const NavList = styled.nav`
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: 1;
+`;
 
+const NavLink = styled(Link)<{ $active: boolean }>`
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.2s ease;
+
+  /* Estados */
+  color: ${props => props.$active ? 'var(--primary)' : 'var(--text-secondary)'};
+  background: ${props => props.$active ? 'rgba(0, 113, 227, 0.08)' : 'transparent'};
+
+  &:hover {
+    background: ${props => props.$active ? 'rgba(0, 113, 227, 0.12)' : 'rgba(0,0,0,0.03)'};
+    color: ${props => props.$active ? 'var(--primary)' : 'var(--text-primary)'};
+  }
+`;
+
+const UserProfile = styled.div`
+  margin-top: auto;
+  padding: 16px;
+  border-top: var(--border-subtle);
+  display: flex;
+  align-items: center;
+  gap: 12px;
+
+  .avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, #00C6FB 0%, #005BEA 100%);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 14px;
+  }
+  
+  .info {
+    flex: 1;
+    h4 { margin: 0; font-size: 14px; color: var(--text-primary); }
+    p { margin: 0; font-size: 12px; color: var(--text-secondary); }
+  }
+`;
+
+const MainContent = styled.main`
+  flex: 1;
+  margin-left: 260px; /* Ancho del sidebar */
+  /* El padding se maneja dentro de PageContainer */
+`;
+
+export default function Layout({ children }: { children: React.ReactNode }) {
+    const location = useLocation();
+    
     const menuItems = [
         { path: '/', label: 'Dashboard', icon: <LayoutDashboard size={20} /> },
         { path: '/pos', label: 'Punto de Venta', icon: <ShoppingCart size={20} /> },
-        { path: '/productos', label: 'Inventario', icon: <Boxes size={20} /> },
-        { path: '/compras', label: 'Compras', icon: <Package size={20} /> },
+        { path: '/productos', label: 'Inventario', icon: <Package size={20} /> },
+        { path: '/compras', label: 'Entradas', icon: <FileText size={20} /> },
         { path: '/proveedores', label: 'Proveedores', icon: <Truck size={20} /> },
-        { path: '/usuarios', label: 'Usuarios', icon: <Users size={20} /> },
-        { path: '/reportes', label: 'Reportes', icon: <BarChart3 size={20} /> },
+        { path: '/reportes', label: 'Analíticas', icon: <BarChart3 size={20} /> },
+        { path: '/usuarios', label: 'Equipo', icon: <Users size={20} /> },
+    ];
+
+    // Items secundarios (Configuración, Auditoría)
+    const secondaryItems = [
+        { path: '/configuracion', label: 'Configuración', icon: <Settings size={20} /> },
     ];
 
     return (
-        <LayoutContainer>
+        <LayoutWrapper>
             <Sidebar>
-                <div style={{ padding: '30px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                    <h2 style={{ margin: 0, fontSize: '1.4rem', display: 'flex', alignItems: 'center', gap: '10px', color: '#1e293b', letterSpacing: '-0.5px' }}>
-                        🖇️ Papelería <span style={{color: '#4480FF'}}>PRO</span>
-                    </h2>
-                </div>
+                <LogoArea>
+                    <div style={{ width: 32, height: 32, background: 'var(--primary)', borderRadius: 8 }}></div>
+                    <h2>Papelería <span>PRO</span></h2>
+                </LogoArea>
 
-                <nav style={{ flex: 1, padding: '20px 0' }}>
-                    {menuItems.map((item) => (
-                        <NavItem key={item.path} to={item.path} $active={location.pathname === item.path}>
+                <NavList>
+                    {menuItems.map(item => (
+                        <NavLink key={item.path} to={item.path} $active={location.pathname === item.path}>
                             {item.icon}
-                            <span>{item.label}</span>
-                        </NavItem>
+                            {item.label}
+                        </NavLink>
                     ))}
-                </nav>
+                    <div style={{ height: 1, background: 'var(--border-subtle)', margin: '12px 0' }} />
+                    {secondaryItems.map(item => (
+                        <NavLink key={item.path} to={item.path} $active={location.pathname === item.path}>
+                            {item.icon}
+                            {item.label}
+                        </NavLink>
+                    ))}
+                </NavList>
 
-                <div style={{ padding: '20px', borderTop: '1px solid #f1f5f9', background: '#f8fafc' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                        <div style={{ width: 36, height: 36, borderRadius: '50%', background: 'linear-gradient(135deg, #4480FF 0%, #0550ED 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>AD</div>
-                        <div style={{ fontSize: '0.85rem' }}>
-                            <div style={{ color: '#1e293b', fontWeight: '700' }}>Administrador</div>
-                            <div style={{ color: '#94a3b8' }}>Activo ahora</div>
-                        </div>
+                <UserProfile>
+                    <div className="avatar">JD</div>
+                    <div className="info">
+                        <h4>Juan Dueño</h4>
+                        <p>Administrador</p>
                     </div>
-                </div>
+                    <LogOut size={18} color="var(--text-secondary)" style={{ cursor: 'pointer' }} />
+                </UserProfile>
             </Sidebar>
 
-            <Main>
+            <MainContent>
                 {children}
-            </Main>
-        </LayoutContainer>
+            </MainContent>
+        </LayoutWrapper>
     );
 }

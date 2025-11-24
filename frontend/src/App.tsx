@@ -7,7 +7,8 @@ import Reportes from './pages/Reportes';
 import Proveedores from './pages/Proveedores';
 import Compras from './pages/Compras';
 import Usuarios from './pages/Usuarios';
-import Productos from './pages/Productos'; // NUEVO
+import Productos from './pages/Productos';
+import Configuracion from './pages/Configuracion'; // <-- Importar
 
 function App() {
   return (
@@ -21,6 +22,7 @@ function App() {
             <Route path="/proveedores" element={<Proveedores />} />
             <Route path="/compras" element={<Compras />} />
             <Route path="/usuarios" element={<Usuarios />} />
+            <Route path="/configuracion" element={<Configuracion />} /> {/* <-- Ruta Nueva */}
         </Routes>
       </Layout>
     </BrowserRouter>

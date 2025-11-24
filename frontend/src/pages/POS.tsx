@@ -1,11 +1,150 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import styled from 'styled-components';
 import client from '../api/client';
 import { Producto, ApiResponse } from '../types';
 import { generarTicketPDF } from '../utils/exportUtils';
-import { Search, Printer, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { 
+    Search, ShoppingCart, Plus, Minus, Trash2, 
+    CreditCard, Package 
+} from 'lucide-react';
 
-interface CartItem extends Producto {
+// Importamos nuestro sistema de diseño
+import { 
+    PageContainer, Card, Input, Button, Title, Subtitle 
+} from '../components/ui/SystemDesign';
+
+// --- STYLED COMPONENTS ESPECÍFICOS PARA POS ---
+
+const PosLayout = styled.div`
+  display: grid;
+  grid-template-columns: 1fr 400px;
+  gap: 24px;
+  height: calc(100vh - 100px); /* Ajuste para viewport */
+  
+  @media (max-width: 1024px) {
+    grid-template-columns: 1fr;
+    height: auto;
+  }
+`;
+
+const ProductGrid = styled.div`
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 16px;
+  overflow-y: auto;
+  padding-right: 8px;
+  padding-bottom: 20px;
+  max-height: calc(100vh - 220px);
+  
+  /* Scrollbar moderna */
+  &::-webkit-scrollbar { width: 6px; }
+  &::-webkit-scrollbar-thumb { background-color: #D1D1D6; border-radius: 4px; }
+`;
+
+const ProductCard = styled(Card)`
+  padding: 16px;
+  cursor: pointer;
+  border: 1px solid transparent;
+  transition: all 0.2s ease;
+  position: relative;
+  
+  &:hover {
+    border-color: var(--primary);
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+  }
+
+  .stock-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    font-size: 11px;
+    font-weight: 700;
+    color: var(--text-secondary);
+  }
+`;
+
+const CartSection = styled(Card)`
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  padding: 0; /* Padding manual interno */
+  overflow: hidden;
+  position: sticky;
+  top: 20px;
+`;
+
+const CartList = styled.div`
+  flex: 1;
+  overflow-y: auto;
+  padding: 20px;
+  
+  &::-webkit-scrollbar { width: 6px; }
+`;
+
+const CartItem = styled.div`
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px dashed #E5E5EA;
+  
+  &:last-child { border-bottom: none; }
+
+  .info {
+    flex: 1;
+    h4 { margin: 0; font-size: 14px; font-weight: 600; color: var(--text-primary); }
+    p { margin: 2px 0 0; font-size: 12px; color: var(--text-secondary); }
+  }
+
+  .controls {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    background: #F2F2F7;
+    padding: 4px;
+    border-radius: 8px;
+  }
+  
+  .qty-btn {
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    background: white;
+    border-radius: 6px;
+    cursor: pointer;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+    &:hover { color: var(--primary); }
+  }
+`;
+
+const CheckoutFooter = styled.div`
+  background: #FAFAFA;
+  padding: 24px;
+  border-top: 1px solid #E5E5EA;
+
+  .row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    font-size: 14px;
+    color: var(--text-secondary);
+  }
+  
+  .total {
+    font-size: 24px;
+    font-weight: 800;
+    color: var(--text-primary);
+    margin-top: 12px;
+    margin-bottom: 20px;
+  }
+`;
+
+// --- INTERFACES ---
+interface CartItemType extends Producto {
     cantidad: number;
     subtotal: number;
 }
@@ -13,23 +152,37 @@ interface CartItem extends Producto {
 export default function POS() {
     const [productos, setProductos] = useState<Producto[]>([]);
     const [busqueda, setBusqueda] = useState('');
-    const [carrito, setCarrito] = useState<CartItem[]>([]);
+    const [carrito, setCarrito] = useState<CartItemType[]>([]);
     const [loading, setLoading] = useState(false);
+    const searchInputRef = useRef<HTMLInputElement>(null);
 
+    // Cargar catálogo inicial
     useEffect(() => {
         client.get<ApiResponse<Producto[]>>('/productos')
             .then(res => setProductos(res.data.data))
             .catch(err => console.error(err));
     }, []);
 
+    // Enfoque automático al buscador
+    useEffect(() => {
+        const handleKeyDown = (e: KeyboardEvent) => {
+            if (e.key === 'F2') searchInputRef.current?.focus();
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, []);
+
+    // Filtrado inteligente
     const productosFiltrados = productos.filter(p => 
-        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || p.sku.includes(busqueda)
+        p.nombre.toLowerCase().includes(busqueda.toLowerCase()) || 
+        p.sku.includes(busqueda)
     );
 
+    // Lógica del Carrito
     const agregarAlCarrito = (prod: Producto) => {
         setCarrito(prev => {
-            const existente = prev.find(item => item.id_producto === prod.id_producto);
-            if (existente) {
+            const existe = prev.find(item => item.id_producto === prod.id_producto);
+            if (existe) {
                 return prev.map(item => 
                     item.id_producto === prod.id_producto
                         ? { ...item, cantidad: item.cantidad + 1, subtotal: (item.cantidad + 1) * item.precio_venta }
@@ -43,24 +196,28 @@ export default function POS() {
     const modificarCantidad = (id: number, delta: number) => {
         setCarrito(prev => prev.map(item => {
             if (item.id_producto === id) {
-                const nuevaCant = Math.max(1, item.cantidad + delta);
-                return { ...item, cantidad: nuevaCant, subtotal: nuevaCant * item.precio_venta };
+                const nueva = Math.max(1, item.cantidad + delta);
+                return { ...item, cantidad: nueva, subtotal: nueva * item.precio_venta };
             }
             return item;
         }));
     };
 
-    const eliminarDelCarrito = (id: number) => {
+    const eliminarItem = (id: number) => {
         setCarrito(prev => prev.filter(item => item.id_producto !== id));
     };
 
+    // Cálculos
     const totalVenta = carrito.reduce((sum, item) => sum + item.subtotal, 0);
+    const iva = totalVenta * 0.16;
+    const subtotal = totalVenta - iva;
 
     const cobrar = async () => {
         if (carrito.length === 0) return;
         setLoading(true);
+
         try {
-            const res = await client.post('/ventas', {
+            const payload = {
                 venta: { total: totalVenta, metodo_pago: 'Efectivo', id_usuario: 1 },
                 detalles: carrito.map(item => ({
                     id_producto: item.id_producto,
@@ -68,353 +225,146 @@ export default function POS() {
                     precio_unitario: item.precio_venta,
                     subtotal: item.subtotal
                 }))
-            });
-            
+            };
+
+            const res = await client.post('/ventas', payload);
+
             if (res.data.success) {
-                setTimeout(() => {
-                    if (confirm('✅ Venta Exitosa. ¿Imprimir Ticket?')) generarTicketPDF({ total: totalVenta }, carrito);
-                }, 100);
+                generarTicketPDF({ total: totalVenta }, carrito);
                 setCarrito([]);
             }
         } catch (error: any) {
-            alert('Error: ' + error.message);
+            alert('Error al procesar venta');
         } finally {
             setLoading(false);
         }
     };
 
     return (
-        <StyledWrapper>
-            <div className="master-container">
-                
-                {/* IZQUIERDA: CATÁLOGO (Adaptado al estilo visual) */}
-                <div className="card coupons">
-                    <label className="title">Catálogo de Productos</label>
-                    <div className="form">
-                        <div style={{position: 'relative', width: '100%'}}>
-                            <Search size={16} style={{position: 'absolute', left: 10, top: 12, color: '#999'}} />
-                            <input 
-                                type="text" 
-                                placeholder="Buscar por nombre o SKU..." 
-                                className="input_field" 
-                                style={{paddingLeft: 35}}
-                                value={busqueda}
-                                onChange={e => setBusqueda(e.target.value)}
-                            />
-                        </div>
-                    </div>
-                    
-                    <div className="grid-productos">
-                        {productosFiltrados.map(prod => (
-                            <div key={prod.id_producto} className="product-card" onClick={() => agregarAlCarrito(prod)}>
-                                <div className="icon-box">
-                                    <ShoppingCart size={20} color="#FF8413" />
-                                </div>
-                                <div className="info">
-                                    <span className="name">{prod.nombre}</span>
-                                    <p className="sku">SKU: {prod.sku}</p>
-                                    <p className="stock">Stock: {prod.stock_actual}</p>
-                                </div>
-                                <label className="price-tag">${prod.precio_venta}</label>
-                            </div>
-                        ))}
-                    </div>
+        <PageContainer>
+            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '24px' }}>
+                <div>
+                    <Title>Punto de Venta</Title>
+                    <Subtitle>Registra ventas y gestiona el carrito</Subtitle>
                 </div>
-
-                {/* DERECHA: CARRITO (Tu diseño exacto) */}
-                <div className="right-column">
-                    <div className="card cart">
-                        <label className="title">Carrito de Venta</label>
-                        <div className="products">
-                            {carrito.length === 0 ? <div style={{padding:20, textAlign:'center', color:'#999'}}>Carrito Vacío</div> : 
-                                carrito.map(item => (
-                                    <div key={item.id_producto} className="product">
-                                        {/* Icono SVG del diseño original */}
-                                        <svg fill="none" viewBox="0 0 60 60" height={60} width={60}>
-                                            <rect fill="#FFF6EE" rx="8.25" height={60} width={60} />
-                                            <path strokeLinecap="round" strokeWidth="2.25" stroke="#FF8413" d="M20 27H40" /> 
-                                            <path strokeLinecap="round" strokeWidth="2.25" stroke="#FF8413" d="M30 20V34" />
-                                        </svg>
-                                        
-                                        <div>
-                                            <span>{item.nombre}</span>
-                                            <p>{item.sku}</p>
-                                            <p onClick={() => eliminarDelCarrito(item.id_producto)} style={{color: '#ef4444', cursor: 'pointer'}}>Eliminar</p>
-                                        </div>
-                                        
-                                        <div className="quantity">
-                                            <button onClick={() => modificarCantidad(item.id_producto, -1)}>
-                                                <Minus size={12} />
-                                            </button>
-                                            <label>{item.cantidad}</label>
-                                            <button onClick={() => modificarCantidad(item.id_producto, 1)}>
-                                                <Plus size={12} />
-                                            </button>
-                                        </div>
-                                        <label className="price small">${item.subtotal.toFixed(2)}</label>
-                                    </div>
-                                ))
-                            }
-                        </div>
-                    </div>
-
-                    <div className="card checkout">
-                        <label className="title">Resumen</label>
-                        <div className="details">
-                            <span>Subtotal:</span>
-                            <span>${(totalVenta * 0.84).toFixed(2)}</span>
-                            <span>IVA (16%):</span>
-                            <span>${(totalVenta * 0.16).toFixed(2)}</span>
-                        </div>
-                        <div className="checkout--footer">
-                            <label className="price"><sup>$</sup>{totalVenta.toFixed(2)}</label>
-                            <button className="checkout-btn" onClick={cobrar} disabled={loading || carrito.length === 0}>
-                                {loading ? '...' : 'COBRAR'}
-                            </button>
-                        </div>
-                    </div>
+                <div style={{ color: 'var(--text-secondary)', fontSize: '13px' }}>
+                    Presiona <b>F2</b> para buscar
                 </div>
-
             </div>
-        </StyledWrapper>
+
+            <PosLayout>
+                {/* IZQUIERDA: CATÁLOGO */}
+                <div>
+                    <div style={{ position: 'relative', marginBottom: '20px' }}>
+                        <Search size={18} style={{ position: 'absolute', left: 14, top: 13, color: '#999' }} />
+                        <Input 
+                            ref={searchInputRef}
+                            placeholder="Buscar producto por nombre, SKU o código..." 
+                            style={{ paddingLeft: '40px', height: '48px', fontSize: '16px' }}
+                            value={busqueda}
+                            onChange={e => setBusqueda(e.target.value)}
+                            autoFocus
+                        />
+                    </div>
+
+                    <ProductGrid>
+                        {productosFiltrados.map(prod => (
+                            <ProductCard key={prod.id_producto} onClick={() => agregarAlCarrito(prod)}>
+                                <span className="stock-badge">Stock: {prod.stock_actual}</span>
+                                <div style={{ 
+                                    width: 40, height: 40, background: '#F2F2F7', borderRadius: '8px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', marginBottom: '12px',
+                                    color: 'var(--primary)'
+                                }}>
+                                    <Package size={20} />
+                                </div>
+                                <h4 style={{ margin: '0 0 4px 0', fontSize: '14px', color: 'var(--text-primary)' }}>{prod.nombre}</h4>
+                                <p style={{ margin: 0, fontSize: '12px', color: 'var(--text-secondary)' }}>{prod.sku}</p>
+                                <div style={{ marginTop: '12px', fontWeight: '700', fontSize: '16px', color: 'var(--primary)' }}>
+                                    ${prod.precio_venta}
+                                </div>
+                            </ProductCard>
+                        ))}
+                    </ProductGrid>
+                </div>
+
+                {/* DERECHA: TICKET / CARRITO */}
+                <CartSection>
+                    <div style={{ padding: '20px', borderBottom: '1px solid #E5E5EA', display: 'flex', gap: '10px', alignItems: 'center' }}>
+                        <ShoppingCart size={20} color="var(--primary)" />
+                        <h3 style={{ margin: 0, fontSize: '16px' }}>Ticket Actual</h3>
+                    </div>
+
+                    <CartList>
+                        {carrito.length === 0 ? (
+                            <div style={{ textAlign: 'center', color: 'var(--text-secondary)', marginTop: '40px' }}>
+                                <Package size={48} style={{ opacity: 0.2, marginBottom: '10px' }} />
+                                <p>El carrito está vacío</p>
+                            </div>
+                        ) : (
+                            carrito.map(item => (
+                                <CartItem key={item.id_producto}>
+                                    <div className="info">
+                                        <h4>{item.nombre}</h4>
+                                        <p>${item.precio_venta} x {item.cantidad}</p>
+                                    </div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                        <div className="controls">
+                                            <button className="qty-btn" onClick={() => modificarCantidad(item.id_producto, -1)}>
+                                                <Minus size={14} />
+                                            </button>
+                                            <span style={{ fontSize: '14px', fontWeight: '600', minWidth: '20px', textAlign: 'center' }}>
+                                                {item.cantidad}
+                                            </span>
+                                            <button className="qty-btn" onClick={() => modificarCantidad(item.id_producto, 1)}>
+                                                <Plus size={14} />
+                                            </button>
+                                        </div>
+                                        <div style={{ minWidth: '60px', textAlign: 'right', fontWeight: '600' }}>
+                                            ${item.subtotal.toFixed(2)}
+                                        </div>
+                                        <Trash2 
+                                            size={16} 
+                                            color="var(--danger)" 
+                                            style={{ cursor: 'pointer', marginLeft: '8px' }}
+                                            onClick={() => eliminarItem(item.id_producto)}
+                                        />
+                                    </div>
+                                </CartItem>
+                            ))
+                        )}
+                    </CartList>
+
+                    <CheckoutFooter>
+                        <div className="row">
+                            <span>Subtotal</span>
+                            <span>${subtotal.toFixed(2)}</span>
+                        </div>
+                        <div className="row">
+                            <span>IVA (16%)</span>
+                            <span>${iva.toFixed(2)}</span>
+                        </div>
+                        <div className="row total">
+                            <span>Total</span>
+                            <span>${totalVenta.toFixed(2)}</span>
+                        </div>
+
+                        {/* CORRECCIÓN: Usamos $variant */}
+                        <Button 
+                            $variant="primary" 
+                            style={{ width: '100%', height: '52px', fontSize: '16px' }}
+                            disabled={loading || carrito.length === 0}
+                            onClick={cobrar}
+                        >
+                            {loading ? 'Procesando...' : (
+                                <>
+                                    <CreditCard size={20} /> Cobrar Ticket
+                                </>
+                            )}
+                        </Button>
+                    </CheckoutFooter>
+                </CartSection>
+            </PosLayout>
+        </PageContainer>
     );
 }
-
-const StyledWrapper = styled.div`
-  /* LAYOUT GRID */
-  .master-container {
-    display: grid;
-    grid-template-columns: 1fr 400px;
-    gap: 20px;
-    height: calc(100vh - 40px);
-  }
-
-  .right-column {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  /* ESTILOS ORIGINALES ADAPTADOS */
-  .card {
-    background: #FFFFFF;
-    box-shadow: 0px 187px 75px rgba(0, 0, 0, 0.01), 0px 105px 63px rgba(0, 0, 0, 0.05), 0px 47px 47px rgba(0, 0, 0, 0.09), 0px 12px 26px rgba(0, 0, 0, 0.1), 0px 0px 0px rgba(0, 0, 0, 0.1);
-    border-radius: 19px;
-    overflow: hidden;
-  }
-
-  .title {
-    width: 100%;
-    height: 50px;
-    display: flex;
-    align-items: center;
-    padding-left: 20px;
-    border-bottom: 1px solid #efeff3;
-    font-weight: 700;
-    font-size: 14px;
-    color: #63656b;
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-  }
-
-  /* PRODUCTOS GRID (IZQUIERDA) */
-  .grid-productos {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-    gap: 15px;
-    padding: 20px;
-    max-height: calc(100vh - 150px);
-    overflow-y: auto;
-  }
-
-  .product-card {
-    background: #fff;
-    border: 1px solid #e5e5e5;
-    border-radius: 12px;
-    padding: 15px;
-    cursor: pointer;
-    transition: all 0.2s;
-    position: relative;
-  }
-
-  .product-card:hover {
-    border-color: #4480FF;
-    transform: translateY(-3px);
-    box-shadow: 0 10px 20px rgba(0,0,0,0.05);
-  }
-
-  .product-card .name {
-    font-weight: 600;
-    font-size: 14px;
-    color: #47484b;
-    display: block;
-    margin-bottom: 5px;
-  }
-
-  .product-card .sku, .product-card .stock {
-    font-size: 11px;
-    color: #7a7c81;
-    margin: 0;
-  }
-
-  .product-card .price-tag {
-    position: absolute;
-    top: 10px;
-    right: 10px;
-    font-weight: 800;
-    color: #4480FF;
-  }
-
-  /* CART (DERECHA) */
-  .cart .products {
-    display: flex;
-    flex-direction: column;
-    padding: 10px;
-    max-height: 400px;
-    overflow-y: auto;
-  }
-
-  .cart .products .product {
-    display: grid;
-    grid-template-columns: 60px 1fr 80px 70px;
-    gap: 10px;
-    padding: 10px 0;
-    border-bottom: 1px dashed #eee;
-    align-items: center;
-  }
-
-  .cart .products .product span {
-    font-size: 13px;
-    font-weight: 600;
-    color: #47484b;
-    display: block;
-  }
-
-  .cart .products .product p {
-    font-size: 11px;
-    font-weight: 600;
-    color: #7a7c81;
-    margin: 0;
-  }
-
-  .cart .quantity {
-    height: 30px;
-    display: grid;
-    grid-template-columns: 1fr 1fr 1fr;
-    background-color: #ffffff;
-    border: 1px solid #e5e5e5;
-    border-radius: 7px;
-    filter: drop-shadow(0px 1px 0px #efefef) drop-shadow(0px 1px 0.5px rgba(239, 239, 239, 0.5));
-  }
-
-  .cart .quantity label {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 13px;
-    font-weight: 700;
-    color: #47484b;
-  }
-
-  .cart .quantity button {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border: 0;
-    background-color: transparent;
-    cursor: pointer;
-  }
-
-  .cart .small {
-    font-size: 15px;
-    font-weight: 700;
-    text-align: right;
-  }
-
-  /* CHECKOUT */
-  .checkout .details {
-    display: grid;
-    grid-template-columns: 3fr 1fr;
-    padding: 20px;
-    gap: 10px;
-  }
-
-  .checkout .details span {
-    font-size: 13px;
-    font-weight: 600;
-    color: #47484b;
-  }
-
-  .checkout .details span:nth-child(odd) {
-    font-size: 12px;
-    color: #707175;
-  }
-
-  .checkout .checkout--footer {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 20px;
-    background-color: #efeff3;
-  }
-
-  .price {
-    font-size: 26px;
-    color: #2B2B2F;
-    font-weight: 900;
-  }
-
-  .price sup {
-    font-size: 14px;
-    margin-right: 2px;
-  }
-
-  .checkout-btn {
-    display: flex;
-    flex-direction: row;
-    justify-content: center;
-    align-items: center;
-    width: 150px;
-    height: 45px;
-    background: linear-gradient(180deg, #4480FF 0%, #115DFC 50%, #0550ED 100%);
-    box-shadow: 0px 0.5px 0.5px #EFEFEF, 0px 1px 0.5px rgba(239, 239, 239, 0.5);
-    border-radius: 7px;
-    border: 0;
-    color: #ffffff;
-    font-size: 14px;
-    font-weight: 600;
-    transition: all 0.3s;
-  }
-  
-  .checkout-btn:hover {
-    transform: scale(1.02);
-    box-shadow: 0 5px 15px rgba(68, 128, 255, 0.4);
-  }
-  
-  .checkout-btn:disabled {
-    background: #ccc;
-    transform: none;
-    box-shadow: none;
-  }
-
-  .coupons .form {
-      padding: 20px;
-      display: flex;
-      gap: 10px;
-  }
-  
-  .input_field {
-    width: 100%;
-    height: 42px;
-    padding: 0 0 0 12px;
-    border-radius: 5px;
-    outline: none;
-    border: 1px solid #e5e5e5;
-    filter: drop-shadow(0px 1px 0px #efefef) drop-shadow(0px 1px 0.5px rgba(239, 239, 239, 0.5));
-    transition: all 0.3s;
-  }
-  
-  .input_field:focus {
-      border-color: #4480FF;
-  }
-`;
