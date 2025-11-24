@@ -16,7 +16,7 @@ export class ReportesRepository {
         return rows;
     }
 
-    // Ventas de la semana (CORREGIDO)
+    // Ventas de la semana
     async obtenerVentasSemana() {
         const [rows] = await pool.query<RowDataPacket[]>(`
             SELECT 
@@ -29,5 +29,30 @@ export class ReportesRepository {
             ORDER BY fecha ASC
         `);
         return rows;
+    }
+
+    // KPIs Generales (El método nuevo corregido)
+    async obtenerKPIs() {
+        // 1. Total ventas hoy
+        const [ventasHoy] = await pool.query<RowDataPacket[]>(
+            "SELECT SUM(total) as total, COUNT(*) as tickets FROM ventas WHERE DATE(fecha) = CURDATE()"
+        );
+        
+        // 2. Total ventas mes actual
+        const [ventasMes] = await pool.query<RowDataPacket[]>(
+            "SELECT SUM(total) as total FROM ventas WHERE MONTH(fecha) = MONTH(CURDATE()) AND YEAR(fecha) = YEAR(CURDATE())"
+        );
+    
+        // 3. Productos con stock bajo
+        const [stockBajo] = await pool.query<RowDataPacket[]>(
+            "SELECT COUNT(*) as cantidad FROM inventario WHERE stock_actual <= stock_minimo"
+        );
+    
+        return {
+            ventas_hoy: ventasHoy[0].total || 0,
+            tickets_hoy: ventasHoy[0].tickets || 0,
+            ventas_mes: ventasMes[0].total || 0,
+            alertas_stock: stockBajo[0].cantidad || 0
+        };
     }
 }

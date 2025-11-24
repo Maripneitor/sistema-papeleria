@@ -2,26 +2,13 @@ import { Request, Response } from 'express';
 import { ReportesRepository } from './ReportesRepository';
 
 export class ReportesController {
-    private repo: ReportesRepository;
-
-    constructor() {
-        this.repo = new ReportesRepository();
-    }
-
+    private repo = new ReportesRepository();
     obtenerDashboard = async (req: Request, res: Response) => {
-        try {
-            const topProductos = await this.repo.obtenerTopProductos();
-            const ventasSemana = await this.repo.obtenerVentasSemana();
-            
-            res.json({
-                success: true,
-                data: {
-                    topProductos,
-                    ventasSemana
-                }
-            });
-        } catch (error: any) {
-            res.status(500).json({ success: false, message: error.message });
-        }
+        const [topProductos, ventasSemana, kpis] = await Promise.all([
+            this.repo.obtenerTopProductos(),
+            this.repo.obtenerVentasSemana(),
+            this.repo.obtenerKPIs()
+        ]);
+        res.json({ success: true, data: { kpis, topProductos, ventasSemana } });
     }
 }

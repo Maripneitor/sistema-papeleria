@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { ReportesController } from './ReportesController';
-
 const router = Router();
-const controller = new ReportesController();
-
-router.get('/dashboard', controller.obtenerDashboard);
-
+const ctrl = new ReportesController();
+router.get('/dashboard', ctrl.obtenerDashboard);
 export default router;

@@ -1,7 +1,8 @@
 import pool from '../../../config/db';
 import { VentaRepository } from '../repositories/VentaRepository';
 import { InventarioRepository } from '../../inventario/repositories/InventarioRepository';
-import { Venta, VentaDetalle } from '../../shared/types';
+import { Venta, VentaDetalle } from '../../shared/types'; // Asegúrate que estos tipos existan en el paso 4
+import { AppError } from '../../../shared/utils/AppError';
 
 export class VentaService {
     private ventaRepo: VentaRepository;
@@ -12,38 +13,37 @@ export class VentaService {
         this.inventarioRepo = new InventarioRepository();
     }
 
-    async procesarVenta(datosVenta: Venta, detalles: VentaDetalle[]) {
+    async procesarVenta(venta: Venta, detalles: VentaDetalle[]) {
         const connection = await pool.getConnection();
         
         try {
-            // 1. Iniciar Transacción (Todo o Nada)
             await connection.beginTransaction();
 
-            // 2. Crear Venta Cabecera
-            const idVenta = await this.ventaRepo.crearVenta(datosVenta, connection);
-
-            // 3. Procesar cada producto
+            // 1. Verificar stock suficiente
             for (const item of detalles) {
-                // Validar stock antes de vender (Lógica básica)
-                const stock = await this.inventarioRepo.obtenerPorProducto(item.id_producto);
-                if (!stock || stock.stock_actual < item.cantidad) {
-                    throw new Error(`Stock insuficiente para el producto ID: ${item.id_producto}`);
+                const inventario = await this.inventarioRepo.obtenerPorProducto(item.id_producto, connection);
+                if (!inventario || inventario.stock_actual < item.cantidad) {
+                    throw new AppError(`Stock insuficiente para el producto ID: ${item.id_producto}`, 400);
                 }
+            }
 
-                // Guardar detalle
+            // 2. Crear Venta Cabecera
+            // idVenta es la variable local (camelCase)
+            const idVenta = await this.ventaRepo.crearVenta(venta, connection);
+
+            // 3. Crear Detalles y Descontar Stock
+            for (const item of detalles) {
                 item.id_venta = idVenta;
                 await this.ventaRepo.crearDetalle(item, connection);
-
-                // Descontar inventario (Usando la misma conexión transaccional)
                 await this.inventarioRepo.actualizarStock(item.id_producto, -item.cantidad, connection);
             }
 
-            // 4. Confirmar cambios
             await connection.commit();
-            return { success: true, id_venta: idVenta, mensaje: 'Venta procesada correctamente' };
+            
+            // CORRECCIÓN: Asignamos idVenta a la propiedad id_venta
+            return { id_venta: idVenta, message: 'Venta registrada con éxito' };
 
         } catch (error) {
-            // 5. Si algo falla, deshacer TODO
             await connection.rollback();
             throw error;
         } finally {

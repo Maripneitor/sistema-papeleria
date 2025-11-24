@@ -1,10 +1,7 @@
 import { Router } from 'express';
 import { UsuariosController } from './UsuariosController';
-
 const router = Router();
-const controller = new UsuariosController();
-
-router.get('/', controller.listar);
-router.post('/', controller.crear);
-
+const ctrl = new UsuariosController();
+router.get('/', ctrl.listar);
+router.post('/', ctrl.crear);
 export default router;

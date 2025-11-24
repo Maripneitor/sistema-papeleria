@@ -1,53 +1,36 @@
+// archivo: backend/src/modules/compras/services/CompraService.ts
+
 import pool from '../../../config/db';
 import { CompraRepository } from '../repositories/CompraRepository';
 import { InventarioRepository } from '../../inventario/repositories/InventarioRepository';
 import { Compra, CompraDetalle } from '../../shared/types';
 
 export class CompraService {
-    private compraRepo: CompraRepository;
-    private inventarioRepo: InventarioRepository;
+    private compraRepo = new CompraRepository();
+    private invRepo = new InventarioRepository();
 
-    constructor() {
-        this.compraRepo = new CompraRepository();
-        this.inventarioRepo = new InventarioRepository();
-    }
-
-    async procesarCompra(datosCompra: Compra, detalles: CompraDetalle[]) {
-        const connection = await pool.getConnection();
-        
+    async procesarCompra(compra: Compra, detalles: CompraDetalle[]) {
+        const conn = await pool.getConnection();
         try {
-            await connection.beginTransaction();
-
-            // 1. Registrar Cabecera
-            const idCompra = await this.compraRepo.crearCompra(datosCompra, connection);
-
-            // 2. Procesar Detalles y Aumentar Stock
+            await conn.beginTransaction();
+            // Usamos idCompra (camelCase)
+            const idCompra = await this.compraRepo.crearCompra(compra, conn);
+            
             for (const item of detalles) {
                 item.id_compra = idCompra;
-                
-                // Guardar detalle
-                await this.compraRepo.crearDetalle(item, connection);
-
-                // AUMENTAR Inventario (cantidad positiva)
-                // Nota: Si el producto no existe en inventario, deberíamos inicializarlo, 
-                // pero por ahora asumimos que el producto ya fue creado en el catálogo.
-                try {
-                    await this.inventarioRepo.actualizarStock(item.id_producto, item.cantidad, connection);
-                } catch (e) {
-                    // Si falla al actualizar, intentamos inicializar (auto-fix)
-                    await this.inventarioRepo.inicializar(item.id_producto); 
-                    await this.inventarioRepo.actualizarStock(item.id_producto, item.cantidad, connection);
-                }
+                await this.compraRepo.crearDetalle(item, conn);
+                // Sumar stock (positivo)
+                await this.invRepo.actualizarStock(item.id_producto, item.cantidad, conn);
             }
-
-            await connection.commit();
-            return { success: true, id_compra: idCompra, message: 'Compra registrada e inventario actualizado' };
-
-        } catch (error) {
-            await connection.rollback();
-            throw error;
+            await conn.commit();
+            
+            // CORRECCIÓN: Retornamos con el nombre correcto de la propiedad
+            return { id_compra: idCompra }; 
+        } catch (err) {
+            await conn.rollback();
+            throw err;
         } finally {
-            connection.release();
+            conn.release();
         }
     }
 }

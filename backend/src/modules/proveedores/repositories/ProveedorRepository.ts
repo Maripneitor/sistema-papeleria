@@ -1,19 +1,17 @@
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { ResultSetHeader } from 'mysql2';
 import pool from '../../../config/db';
-import { Proveedor } from '../../shared/types';
+import { IProveedorRow, Proveedor } from '../../shared/types';
 
 export class ProveedorRepository {
-    
-    async findAll(): Promise<Proveedor[]> {
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM proveedores ORDER BY nombre ASC');
-        return rows as Proveedor[];
+    async findAll() {
+        const [rows] = await pool.query<IProveedorRow[]>('SELECT * FROM proveedores');
+        return rows;
     }
-
-    async create(datos: Proveedor): Promise<number> {
-        const [result] = await pool.query<ResultSetHeader>(
-            'INSERT INTO proveedores (nombre, contacto, telefono, correo, direccion) VALUES (?, ?, ?, ?, ?)',
-            [datos.nombre, datos.contacto, datos.telefono, datos.correo, datos.direccion]
+    async create(data: Proveedor) {
+        const [res] = await pool.query<ResultSetHeader>(
+            'INSERT INTO proveedores (nombre, contacto, telefono, correo) VALUES (?, ?, ?, ?)',
+            [data.nombre, data.contacto, data.telefono, data.correo]
         );
-        return result.insertId;
+        return res.insertId;
     }
 }

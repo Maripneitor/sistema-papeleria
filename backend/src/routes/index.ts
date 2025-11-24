@@ -1,18 +1,20 @@
+// archivo: backend/src/routes/index.ts
+
 import { Router } from 'express';
-import rutasProductos from '../modules/productos/routes';
-import rutasVentas from '../modules/ventas/routes';
-import rutasReportes from '../modules/reportes/routes';
-import rutasProveedores from '../modules/proveedores/routes';
-import rutasCompras from '../modules/compras/routes';
-import rutasUsuarios from '../modules/usuarios/routes';
+import productosRouter from '../modules/productos/routes';
+import ventasRouter from '../modules/ventas/routes';
+import comprasRouter from '../modules/compras/routes';
+import proveedoresRouter from '../modules/proveedores/routes';
+import usuariosRouter from '../modules/usuarios/routes';
+import reportesRouter from '../modules/reportes/routes';
 
 const router = Router();
 
-router.use('/productos', rutasProductos);
-router.use('/ventas', rutasVentas);
-router.use('/reportes', rutasReportes);
-router.use('/proveedores', rutasProveedores);
-router.use('/compras', rutasCompras);
-router.use('/usuarios', rutasUsuarios);
+router.use('/productos', productosRouter);
+router.use('/ventas', ventasRouter);
+router.use('/compras', comprasRouter);
+router.use('/proveedores', proveedoresRouter);
+router.use('/usuarios', usuariosRouter);
+router.use('/reportes', reportesRouter);
 
 export default router;

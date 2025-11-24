@@ -1,31 +1,33 @@
-import { RowDataPacket, PoolConnection } from 'mysql2/promise';
+// archivo: backend/src/modules/inventario/repositories/InventarioRepository.ts
+
+import { PoolConnection, RowDataPacket } from 'mysql2/promise';
 import pool from '../../../config/db';
-import { Inventario } from '../../shared/types';
+import { IInventarioRow } from '../../shared/types';
 
 export class InventarioRepository {
-
-    // Inicializar inventario para un producto nuevo (Stock 0)
-    async inicializar(idProducto: number): Promise<void> {
-        await pool.query(
-            'INSERT INTO inventario (id_producto, stock_actual, stock_minimo, stock_maximo, ubicacion) VALUES (?, 0, 5, 100, "Bodega General")',
-            [idProducto]
-        );
-    }
-
-    // Obtener stock actual
-    async obtenerPorProducto(idProducto: number): Promise<Inventario | null> {
-        const [rows] = await pool.query<RowDataPacket[]>(
+    
+    // Obtener inventario de un producto
+    async obtenerPorProducto(idProducto: number, connection?: PoolConnection): Promise<IInventarioRow | null> {
+        const db = connection || pool;
+        const [rows] = await db.query<IInventarioRow[]>(
             'SELECT * FROM inventario WHERE id_producto = ?',
             [idProducto]
         );
-        return rows.length ? (rows[0] as Inventario) : null;
+        return rows.length ? rows[0] : null;
     }
 
-    // Actualizar stock (Soporta transacciones externas para las ventas)
-    async actualizarStock(idProducto: number, cantidad: number, conexion?: PoolConnection): Promise<void> {
-        const db = conexion || pool;
-        // Si cantidad es negativa (venta), resta. Si es positiva (compra), suma.
-        await db.query(
+    // Inicializar inventario (para producto nuevo)
+    async inicializar(idProducto: number): Promise<void> {
+        await pool.query(
+            'INSERT INTO inventario (id_producto, stock_actual, stock_minimo, stock_maximo) VALUES (?, 0, 5, 100)',
+            [idProducto]
+        );
+    }
+
+    // Actualizar stock (Atómico dentro de transacción)
+    async actualizarStock(idProducto: number, cantidad: number, connection: PoolConnection): Promise<void> {
+        // Cantidad positiva suma (compra), negativa resta (venta)
+        await connection.query(
             'UPDATE inventario SET stock_actual = stock_actual + ? WHERE id_producto = ?',
             [cantidad, idProducto]
         );

@@ -1,0 +1,5 @@
+git add .
+
+git commit -m "Rediseño UI completo: Styled Components, Dashboard grafico y POS visual"
+
+git push origin main

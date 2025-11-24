@@ -1,25 +1,28 @@
-import { RowDataPacket, ResultSetHeader } from 'mysql2';
+import { ResultSetHeader } from 'mysql2';
 import pool from '../../../config/db';
-import { Usuario } from '../../shared/types';
+import { IUsuarioRow, Usuario } from '../../shared/types';
 
 export class UsuarioRepository {
     
-    async findAll(): Promise<Usuario[]> {
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT id_usuario, nombre, usuario, rol, activo FROM usuarios');
-        return rows as Usuario[];
+    async findAll() {
+        const [rows] = await pool.query<IUsuarioRow[]>('SELECT id_usuario, nombre, usuario, rol FROM usuarios');
+        return rows;
     }
 
+    // ESTE METODO FALTABA:
     async findByUsername(username: string): Promise<Usuario | null> {
-        const [rows] = await pool.query<RowDataPacket[]>('SELECT * FROM usuarios WHERE usuario = ?', [username]);
-        if (rows.length === 0) return null;
-        return rows[0] as Usuario;
+        const [rows] = await pool.query<IUsuarioRow[]>(
+            'SELECT * FROM usuarios WHERE usuario = ?', 
+            [username]
+        );
+        return rows.length ? rows[0] : null;
     }
 
-    async create(datos: Usuario): Promise<number> {
-        const [result] = await pool.query<ResultSetHeader>(
-            'INSERT INTO usuarios (nombre, usuario, password_hash, rol, activo) VALUES (?, ?, ?, ?, 1)',
-            [datos.nombre, datos.usuario, datos.password_hash, datos.rol]
+    async create(data: Usuario) {
+        const [res] = await pool.query<ResultSetHeader>(
+            'INSERT INTO usuarios (nombre, usuario, password_hash, rol) VALUES (?, ?, ?, ?)',
+            [data.nombre, data.usuario, data.password_hash, data.rol]
         );
-        return result.insertId;
+        return res.insertId;
     }
 }

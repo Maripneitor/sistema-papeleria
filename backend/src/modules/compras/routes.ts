@@ -1,9 +1,6 @@
 import { Router } from 'express';
 import { ComprasController } from './ComprasController';
-
 const router = Router();
-const controller = new ComprasController();
-
-router.post('/', controller.procesarCompra);
-
+const ctrl = new ComprasController();
+router.post('/', ctrl.crear);
 export default router;

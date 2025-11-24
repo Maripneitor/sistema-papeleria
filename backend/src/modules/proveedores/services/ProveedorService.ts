@@ -8,16 +8,17 @@ export class ProveedorService {
         this.repo = new ProveedorRepository();
     }
 
-    async obtenerLista() {
+    // El controlador llama a 'obtenerTodos', así que definimos ese nombre
+    async obtenerTodos() {
         return await this.repo.findAll();
     }
 
-    async registrar(datos: Proveedor) {
-        // Validación simple: Nombre obligatorio
+    // El controlador llama a 'crear', definimos ese nombre
+    async crear(datos: Proveedor) {
+        // Validación básica
         if (!datos.nombre || datos.nombre.length < 3) {
-            throw new Error('El nombre del proveedor es obligatorio y debe tener al menos 3 letras');
+            throw new Error('El nombre del proveedor es obligatorio');
         }
-        const id = await this.repo.create(datos);
-        return { ...datos, id_proveedor: id };
+        return await this.repo.create(datos);
     }
 }
