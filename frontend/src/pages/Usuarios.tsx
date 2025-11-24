@@ -1,15 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import client from '../api/client';
 import { Usuario } from '../types';
+import { PageContainer, Card, CardTitle, Input, Select, Button, Grid2, GridAuto, FormGroup, Badge } from '../components/ui/StyledComponents';
+import { UserPlus, Shield, User } from 'lucide-react';
 
 export default function Usuarios() {
     const [usuarios, setUsuarios] = useState<Usuario[]>([]);
-    const [form, setForm] = useState({ 
-        nombre: '', 
-        usuario: '', 
-        password_hash: '', 
-        rol: 'empleado' 
-    });
+    const [form, setForm] = useState({ nombre: '', usuario: '', password_hash: '', rol: 'empleado' });
     const [loading, setLoading] = useState(false);
 
     const cargar = () => {
@@ -23,7 +20,7 @@ export default function Usuarios() {
         setLoading(true);
         try {
             await client.post('/usuarios', form);
-            setForm({ nombre: '', usuario: '', password_hash: '', rol: 'empleado' }); // Reset
+            setForm({ nombre: '', usuario: '', password_hash: '', rol: 'empleado' });
             cargar();
             alert('✅ Usuario registrado');
         } catch (error: any) {
@@ -34,73 +31,62 @@ export default function Usuarios() {
     };
 
     return (
-        <div style={{ padding: '20px', maxWidth: '800px', margin: '0 auto' }}>
-            <h1>👥 Gestión de Personal</h1>
-
-            {/* FORMULARIO */}
-            <div style={{ background: 'white', padding: '20px', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)', marginBottom: '20px' }}>
-                <h3>Nuevo Empleado</h3>
-                <form onSubmit={guardar} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '15px' }}>
-                    
-                    <div style={{gridColumn: 'span 2'}}>
-                        <label>Nombre Completo:</label>
-                        <input 
-                            required style={{ width: '100%', padding: '8px' }}
-                            value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})}
-                        />
-                    </div>
-
-                    <div>
-                        <label>Usuario (Login):</label>
-                        <input 
-                            required style={{ width: '100%', padding: '8px' }}
-                            value={form.usuario} onChange={e => setForm({...form, usuario: e.target.value})}
-                        />
-                    </div>
-
-                    <div>
-                        <label>Contraseña:</label>
-                        <input 
-                            type="password" required style={{ width: '100%', padding: '8px' }}
-                            value={form.password_hash} onChange={e => setForm({...form, password_hash: e.target.value})}
-                        />
-                    </div>
-
-                    <div>
-                        <label>Rol:</label>
-                        <select 
-                            style={{ width: '100%', padding: '8px' }}
-                            value={form.rol} onChange={e => setForm({...form, rol: e.target.value})}
-                        >
-                            <option value="empleado">Empleado (Cajero)</option>
-                            <option value="admin">Administrador (Total)</option>
-                        </select>
-                    </div>
-
-                    <button type="submit" disabled={loading} style={{ background: '#2563eb', color: 'white', border: 'none', padding: '10px', cursor: 'pointer', height: '100%', marginTop: 'auto' }}>
-                        {loading ? 'Guardando...' : 'Crear Usuario'}
-                    </button>
-                </form>
+        <PageContainer>
+            <div style={{ marginBottom: '30px' }}>
+                <h1 style={{ margin: 0, fontSize: '24px', color: '#1e293b' }}>Equipo de Trabajo</h1>
+                <p style={{ color: '#64748b', margin: '5px 0 0 0', fontSize: '14px' }}>Gestiona el acceso al sistema</p>
             </div>
 
-            {/* LISTA */}
-            <div style={{ display: 'grid', gap: '10px' }}>
-                {usuarios.map(u => (
-                    <div key={u.id_usuario} style={{ background: 'white', padding: '15px', borderRadius: '8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderLeft: u.rol === 'admin' ? '5px solid #e11d48' : '5px solid #2563eb' }}>
-                        <div>
-                            <strong style={{ fontSize: '1.1em' }}>{u.nombre}</strong>
-                            <div style={{ color: '#666', fontSize: '0.9em' }}>@{u.usuario}</div>
-                        </div>
-                        <span style={{ 
-                            background: u.rol === 'admin' ? '#ffe4e6' : '#dbeafe', 
-                            color: u.rol === 'admin' ? '#e11d48' : '#1e40af',
-                            padding: '5px 10px', borderRadius: '15px', fontSize: '0.8em', fontWeight: 'bold'
-                        }}>
-                            {u.rol.toUpperCase()}
-                        </span>
-                    </div>
-                ))}
-            </div>
-        </div>
+            <Grid2 style={{ gridTemplateColumns: '350px 1fr' }}>
+                <Card style={{ height: 'fit-content' }}>
+                    <CardTitle><UserPlus size={20} /> Nuevo Empleado</CardTitle>
+                    <form onSubmit={guardar}>
+                        <FormGroup>
+                            <label>Nombre Completo</label>
+                            <Input required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} />
+                        </FormGroup>
+                        <FormGroup>
+                            <label>Usuario (Login)</label>
+                            <Input required value={form.usuario} onChange={e => setForm({...form, usuario: e.target.value})} />
+                        </FormGroup>
+                        <FormGroup>
+                            <label>Contraseña</label>
+                            <Input type="password" required value={form.password_hash} onChange={e => setForm({...form, password_hash: e.target.value})} />
+                        </FormGroup>
+                        <FormGroup>
+                            <label>Rol de Acceso</label>
+                            <Select value={form.rol} onChange={e => setForm({...form, rol: e.target.value})}>
+                                <option value="empleado">Empleado (Cajero)</option>
+                                <option value="admin">Administrador (Total)</option>
+                            </Select>
+                        </FormGroup>
+                        <Button type="submit" variant="primary" disabled={loading} style={{ width: '100%', marginTop: '15px' }}>
+                            {loading ? 'Guardando...' : 'Crear Usuario'}
+                        </Button>
+                    </form>
+                </Card>
+
+                <GridAuto>
+                    {usuarios.map(u => (
+                        <Card key={u.id_usuario} style={{ flexDirection: 'row', alignItems: 'center', gap: '15px', padding: '20px' }}>
+                            <div style={{ 
+                                width: 50, height: 50, borderRadius: '50%', 
+                                background: u.rol === 'admin' ? 'linear-gradient(135deg, #f43f5e 0%, #e11d48 100%)' : 'linear-gradient(135deg, #4480FF 0%, #0550ED 100%)',
+                                display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white'
+                            }}>
+                                {u.rol === 'admin' ? <Shield size={24} /> : <User size={24} />}
+                            </div>
+                            <div>
+                                <div style={{ fontWeight: '700', fontSize: '16px', color: '#1e293b' }}>{u.nombre}</div>
+                                <div style={{ fontSize: '13px', color: '#64748b', marginBottom: '5px' }}>@{u.usuario}</div>
+                                <Badge color={u.rol === 'admin' ? '#e11d48' : '#4480FF'}>
+                                    {u.rol.toUpperCase()}
+                                </Badge>
+                            </div>
+                        </Card>
+                    ))}
+                </GridAuto>
+            </Grid2>
+        </PageContainer>
     );
 }

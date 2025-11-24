@@ -2,7 +2,8 @@ import React, { useEffect, useState } from 'react';
 import client from '../api/client';
 import { Proveedor } from '../types';
 import { exportToExcel } from '../utils/exportUtils';
-import { Truck, Phone, Mail, MapPin, FileSpreadsheet, Save } from 'lucide-react';
+import { Truck, Phone, Mail, FileSpreadsheet, Save, User } from 'lucide-react';
+import { PageContainer, Card, CardTitle, Input, Button, Grid2, GridAuto, FormGroup } from '../components/ui/StyledComponents';
 
 export default function Proveedores() {
     const [proveedores, setProveedores] = useState<Proveedor[]>([]);
@@ -31,63 +32,70 @@ export default function Proveedores() {
     };
 
     return (
-        <div style={{ maxWidth: '1200px', margin: '0 auto' }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '20px' }}>
-                <h1>🚚 Directorio de Proveedores</h1>
-                <button className="btn btn-outline" onClick={() => exportToExcel(proveedores, 'Proveedores')}>
+        <PageContainer>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '30px' }}>
+                <div>
+                    <h1 style={{ margin: 0, fontSize: '24px', color: '#1e293b' }}>Proveedores</h1>
+                    <p style={{ color: '#64748b', margin: '5px 0 0 0', fontSize: '14px' }}>Directorio de socios comerciales</p>
+                </div>
+                <Button variant="outline" onClick={() => exportToExcel(proveedores, 'Proveedores')}>
                     <FileSpreadsheet size={18} /> Exportar Lista
-                </button>
+                </Button>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '350px 1fr', gap: '25px' }}>
+            <Grid2 style={{ gridTemplateColumns: '350px 1fr' }}>
                 
                 {/* FORMULARIO LATERAL */}
-                <div className="card" style={{ height: 'fit-content' }}>
-                    <h3 style={{ marginBottom: '15px', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <Truck size={20} /> Nuevo Proveedor
-                    </h3>
-                    <form onSubmit={guardar} style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                        <div>
-                            <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Empresa *</label>
-                            <input className="buscador" required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} placeholder="Ej. Papelera S.A." />
-                        </div>
-                        <div>
-                            <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Contacto</label>
-                            <input className="buscador" value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} placeholder="Nombre del vendedor" />
-                        </div>
-                        <div>
-                            <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Teléfono</label>
-                            <input className="buscador" value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} placeholder="555-0000" />
-                        </div>
-                        <div>
-                            <label style={{ fontSize: '0.9rem', fontWeight: 500 }}>Correo</label>
-                            <input className="buscador" type="email" value={form.correo} onChange={e => setForm({...form, correo: e.target.value})} placeholder="contacto@empresa.com" />
-                        </div>
-                        <button type="submit" disabled={loading} className="btn btn-primary" style={{ justifyContent: 'center', marginTop: '10px' }}>
-                            {loading ? 'Guardando...' : <><Save size={18}/> Registrar</>}
-                        </button>
+                <Card style={{ height: 'fit-content' }}>
+                    <CardTitle><Truck size={20} /> Registrar Proveedor</CardTitle>
+                    <form onSubmit={guardar}>
+                        <FormGroup>
+                            <label>Empresa *</label>
+                            <Input required value={form.nombre} onChange={e => setForm({...form, nombre: e.target.value})} placeholder="Ej. Papelera S.A." />
+                        </FormGroup>
+                        <FormGroup>
+                            <label>Nombre de Contacto</label>
+                            <Input value={form.contacto} onChange={e => setForm({...form, contacto: e.target.value})} placeholder="Ej. Juan Pérez" />
+                        </FormGroup>
+                        <FormGroup>
+                            <label>Teléfono</label>
+                            <Input value={form.telefono} onChange={e => setForm({...form, telefono: e.target.value})} placeholder="555-0000" />
+                        </FormGroup>
+                        <FormGroup>
+                            <label>Correo Electrónico</label>
+                            <Input type="email" value={form.correo} onChange={e => setForm({...form, correo: e.target.value})} placeholder="contacto@empresa.com" />
+                        </FormGroup>
+                        <Button type="submit" variant="primary" disabled={loading} style={{ width: '100%', marginTop: '10px' }}>
+                            {loading ? 'Guardando...' : <><Save size={18}/> Registrar Proveedor</>}
+                        </Button>
                     </form>
-                </div>
+                </Card>
 
-                {/* GRID DE TARJETAS (Mejor que tabla para contactos) */}
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))', gap: '15px' }}>
+                {/* GRID DE TARJETAS VISUALES */}
+                <GridAuto>
                     {proveedores.map(p => (
-                        <div key={p.id_proveedor} className="card" style={{ borderLeft: '4px solid #64748b' }}>
-                            <div style={{ fontSize: '1.1rem', fontWeight: 'bold', marginBottom: '5px' }}>{p.nombre}</div>
-                            <div style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '15px' }}>{p.contacto || 'Sin contacto'}</div>
-                            
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', fontSize: '0.85rem' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Phone size={14} color="#2563eb" /> {p.telefono || '--'}
-                                </div>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                                    <Mail size={14} color="#2563eb" /> {p.correo || '--'}
+                        <Card key={p.id_proveedor} style={{ padding: '20px', borderLeft: '4px solid #4480FF' }}>
+                            <div style={{ marginBottom: '15px' }}>
+                                <div style={{ fontSize: '16px', fontWeight: '700', color: '#1e293b' }}>{p.nombre}</div>
+                                <div style={{ fontSize: '13px', color: '#64748b', display: 'flex', alignItems: 'center', gap: '5px', marginTop: '5px' }}>
+                                    <User size={14}/> {p.contacto || 'Sin contacto'}
                                 </div>
                             </div>
-                        </div>
+                            
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', borderTop: '1px solid #f1f5f9', paddingTop: '15px' }}>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#334155' }}>
+                                    <div style={{ padding: '6px', background: '#eff6ff', borderRadius: '6px', color: '#4480FF' }}><Phone size={14} /></div>
+                                    {p.telefono || '--'}
+                                </div>
+                                <div style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '13px', color: '#334155' }}>
+                                    <div style={{ padding: '6px', background: '#eff6ff', borderRadius: '6px', color: '#4480FF' }}><Mail size={14} /></div>
+                                    {p.correo || '--'}
+                                </div>
+                            </div>
+                        </Card>
                     ))}
-                </div>
-            </div>
-        </div>
+                </GridAuto>
+            </Grid2>
+        </PageContainer>
     );
 }

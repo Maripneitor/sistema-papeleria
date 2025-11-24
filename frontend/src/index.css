@@ -1,112 +1,86 @@
 :root {
-  --primary: #2563eb;
-  --bg: #f1f5f9;
-  --card: #ffffff;
-  --text: #1e293b;
+  --primary-gradient: linear-gradient(180deg, #4480FF 0%, #115DFC 50%, #0550ED 100%);
+  --bg-color: #f3f4f6;
+  --card-bg: #FFFFFF;
+  --text-main: #2B2B2F;
+  --text-light: #707175;
+  --shadow-soft: 0px 187px 75px rgba(0, 0, 0, 0.01), 0px 105px 63px rgba(0, 0, 0, 0.05), 0px 47px 47px rgba(0, 0, 0, 0.09), 0px 12px 26px rgba(0, 0, 0, 0.1), 0px 0px 0px rgba(0, 0, 0, 0.1);
 }
 
 body {
   margin: 0;
-  font-family: system-ui, -apple-system, sans-serif;
-  background-color: var(--bg);
-  color: var(--text);
+  font-family: 'Inter', sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-main);
 }
 
-/* Layout POS */
-.pos-container {
-  display: grid;
-  grid-template-columns: 2fr 1fr; /* 2 partes productos, 1 parte ticket */
-  height: 100vh;
-  gap: 20px;
+/* --- Tarjetas Modernas (Estilo proporcionado) --- */
+.card {
+  background: var(--card-bg);
+  border-radius: 19px;
+  box-shadow: var(--shadow-soft);
   padding: 20px;
-  box-sizing: border-box;
+  border: none; /* Quitamos bordes antiguos */
 }
 
-/* Panel Izquierdo */
-.panel-izquierdo {
-  display: flex;
-  flex-direction: column;
-  gap: 15px;
-}
-
-.buscador {
-  padding: 15px;
-  font-size: 1.2rem;
-  border: 1px solid #ccc;
-  border-radius: 8px;
+/* --- Inputs Modernos --- */
+input, select, .buscador {
   width: 100%;
+  height: 40px;
+  padding: 0 12px;
+  border-radius: 7px;
+  outline: none;
+  border: 1px solid #e5e5e5;
+  filter: drop-shadow(0px 1px 0px #efefef) drop-shadow(0px 1px 0.5px rgba(239, 239, 239, 0.5));
+  transition: all 0.3s;
+  font-size: 13px;
+  background: white;
 }
 
-.grid-productos {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-  gap: 15px;
-  overflow-y: auto;
+input:focus, select:focus {
+  border-color: #4480FF;
+  box-shadow: 0 0 0 2px rgba(68, 128, 255, 0.2);
 }
 
-.card-producto {
-  background: var(--card);
-  padding: 15px;
-  border-radius: 8px;
-  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+/* --- Botones Globales (Estilo Checkout) --- */
+.btn, button {
+  border-radius: 7px;
+  border: 0;
+  font-weight: 600;
+  font-size: 13px;
   cursor: pointer;
-  transition: transform 0.1s;
-  border: 1px solid transparent;
+  transition: all 0.3s;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
 }
 
-.card-producto:hover {
-  transform: translateY(-2px);
-  border-color: var(--primary);
-}
-
-.prod-precio {
-  font-weight: bold;
-  color: var(--primary);
-  font-size: 1.1rem;
-}
-
-/* Panel Derecho (Ticket) */
-.panel-derecho {
-  background: var(--card);
-  padding: 20px;
-  border-radius: 12px;
-  display: flex;
-  flex-direction: column;
-  box-shadow: -2px 0 10px rgba(0,0,0,0.1);
-}
-
-.lista-carrito {
-  flex: 1;
-  overflow-y: auto;
-  border-top: 1px solid #eee;
-  border-bottom: 1px solid #eee;
-  margin: 10px 0;
-  padding: 10px 0;
-}
-
-.item-carrito {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px dashed #eee;
-}
-
-.total-section {
-  text-align: right;
-}
-
-.btn-cobrar {
-  width: 100%;
-  padding: 15px;
-  background: #16a34a;
+/* Botón Primario (Azul Degradado) */
+.btn-primary, .btn-cobrar {
+  background: var(--primary-gradient);
   color: white;
-  border: none;
-  border-radius: 8px;
-  font-size: 1.2rem;
-  font-weight: bold;
-  cursor: pointer;
+  box-shadow: 0px 0.5px 0.5px #EFEFEF, 0px 1px 0.5px rgba(239, 239, 239, 0.5);
 }
 
-.btn-cobrar:disabled {
-  background: #ccc;
+.btn-primary:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(68, 128, 255, 0.3);
 }
+
+/* Botón Secundario/Outline */
+.btn-outline {
+  background: white;
+  border: 1px solid #e5e5e5;
+  color: #47484b;
+}
+
+.btn-outline:hover {
+  border-color: #4480FF;
+  color: #4480FF;
+}
+
+/* Tablas más limpias */
+table { width: 100%; border-collapse: collapse; }
+th { text-align: left; padding: 15px; color: var(--text-light); font-size: 12px; font-weight: 700; text-transform: uppercase; border-bottom: 1px solid #efeff3; }
+td { padding: 15px; border-bottom: 1px solid #f1f1f1; font-size: 14px; font-weight: 500; color: var(--text-main); }
